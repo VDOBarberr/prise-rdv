@@ -54,3 +54,79 @@ img {
   user-select: none;
   -webkit-user-drag: none;
 }
+
+@keyframes dropdownOpen {
+
+0% {
+
+opacity:0;
+
+transform:
+translateY(-15px)
+scale(0.98);
+
+max-height:0;
+
+}
+
+
+100% {
+
+opacity:1;
+
+transform:
+translateY(0)
+scale(1);
+
+max-height:600px;
+
+}
+
+}
+
+
+.dropdown-animation {
+
+animation:
+dropdownOpen
+0.35s
+cubic-bezier(.22,1,.36,1)
+forwards;
+
+overflow:hidden;
+
+}
+
+@keyframes serviceAppear {
+
+from {
+
+opacity:0;
+
+transform:
+translateX(-15px);
+
+}
+
+
+to {
+
+opacity:1;
+
+transform:
+translateX(0);
+
+}
+
+}
+
+
+.animate-service {
+
+animation:
+serviceAppear
+0.4s
+ease-out
+forwards;
+
+}

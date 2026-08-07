@@ -7,69 +7,62 @@ import Reservation from "./pages/Reservation"
 import Admin from "./pages/Admin"
 import Login from "./pages/Login"
 import Prestations from "./pages/Prestations"
-
+import Booking from "./pages/Booking"
 import ProtectedRoute from "./components/ProtectedRoute"
 
 
+function App(){
 
-function App() {
+return (
 
-  return (
+<BrowserRouter>
 
-    <BrowserRouter>
-
-
-      <Navbar />
+<Navbar />
 
 
-      <Routes>
+<Routes>
 
 
-        <Route
-          path="/"
-          element={<Home />}
-        />
+<Route
+path="/"
+element={<Home />}
+/>
 
 
-        <Route
-          path="/reservation"
-          element={<Reservation />}
-        />
+<Route 
+path="/reservation"
+element={<Booking />}
+/>
 
 
-        <Route
-          path="/prestations"
-          element={<Prestations />}
-        />        <Route
-          path="/login"
-          element={<Login />}
-        />
+<Route
+path="/prestations"
+element={<Prestations />}
+/>
 
 
-
-        <Route
-
-          path="/admin"
-
-          element={
-
-            <ProtectedRoute>
-
-              <Admin />
-
-            </ProtectedRoute>
-
-          }
-
-        />
+<Route
+path="/login"
+element={<Login />}
+/>
 
 
-      </Routes>
+<Route
+path="/admin"
+element={
+<ProtectedRoute>
+<Admin />
+</ProtectedRoute>
+}
+/>
 
 
-    </BrowserRouter>
+</Routes>
 
-  )
+
+</BrowserRouter>
+
+)
 
 }
 
