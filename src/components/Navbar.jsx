@@ -2,263 +2,370 @@ import { useEffect, useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { supabase } from "../services/supabase"
 
-
 function Navbar() {
 
-const navigate = useNavigate()
+  const navigate = useNavigate()
 
-const [session, setSession] = useState(null)
-
-
-
-useEffect(() => {
-
-supabase.auth.getSession()
-
-.then(({data})=>{
-
-setSession(data.session)
-
-})
+  const [session, setSession] = useState(null)
+  const [menuOpen, setMenuOpen] = useState(false)
 
 
 
-const {
-data: listener
-} = supabase.auth.onAuthStateChange(
+  useEffect(() => {
 
-(_event, session)=>{
-
-setSession(session)
-
-}
-
-)
+    supabase.auth.getSession()
+      .then(({ data }) => {
+        setSession(data.session)
+      })
 
 
-
-return ()=>{
-
-listener.subscription.unsubscribe()
-
-}
-
-},[])
-
+    const {
+      data: listener
+    } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session)
+      }
+    )
 
 
-async function logout(){
+    return () => {
+      listener.subscription.unsubscribe()
+    }
 
-await supabase.auth.signOut()
-
-navigate("/login")
-
-}
+  }, [])
 
 
 
-return (
+  async function logout() {
 
-<header className="
-w-full
-px-6
-py-5
-flex
-items-center
-justify-between
-bg-white
-">
+    await supabase.auth.signOut()
+
+    navigate("/login")
+
+  }
 
 
-{/* LOGO */}
 
-<Link to="/">
+  function closeMenu() {
+    setMenuOpen(false)
+  }
 
-<img
 
-src="/logo.png"
 
-alt="VDO Barber"
+  return (
 
-className="
-h-16
-md:h-20
-w-auto
-object-contain
-"
+    <nav
+      className="
+        w-full
+        bg-white
+        px-5
+        py-4
+        flex
+        items-center
+        justify-between
+        relative
+      "
+    >
 
-/>
+
+      {/* LOGO TEXTE */}
+
+      <Link
+  to="/"
+  className="
+    text-black
+    whitespace-nowrap
+    transition
+    duration-300
+    hover:opacity-70
+    flex
+    flex-col
+    items-start
+  "
+>
+
+  <span
+    className="
+      text-3xl
+      md:text-4xl
+      font-serif
+      font-semibold
+      tracking-[0.35em]
+    "
+  >
+    VDO
+  </span>
+
+
+  <span
+    className="
+      text-xs
+      md:text-sm
+      uppercase
+      tracking-[0.7em]
+      text-gray-600
+      ml-1
+    "
+  >
+    Barber
+  </span>
+
 
 </Link>
 
 
 
-{/* MENU */}
+      {/* BOUTON HAMBURGER MOBILE */}
 
-<nav className="
-flex
-items-center
-gap-8
-">
+      <button
+        onClick={() => setMenuOpen(!menuOpen)}
+        className="
+          md:hidden
+          flex
+          flex-col
+          gap-1.5
+          z-50
+        "
+      >
 
+        <span
+          className={`
+            w-7
+            h-0.5
+            bg-black
+            transition-all
+            duration-300
 
+            ${menuOpen
+              ? "rotate-45 translate-y-2"
+              : ""
+            }
+          `}
+        />
 
-<Link
+        <span
+          className={`
+            w-7
+            h-0.5
+            bg-black
+            transition-all
+            duration-300
 
-to="/"
+            ${menuOpen
+              ? "opacity-0"
+              : ""
+            }
+          `}
+        />
 
-className="
-text-sm
-uppercase
-tracking-[0.25em]
-text-gray-600
-hover:text-black
-transition
-duration-300
-"
+        <span
+          className={`
+            w-7
+            h-0.5
+            bg-black
+            transition-all
+            duration-300
 
->
+            ${menuOpen
+              ? "-rotate-45 -translate-y-2"
+              : ""
+            }
+          `}
+        />
 
-Accueil
-
-</Link>
-
-
-
-<Link
-
-to="/prestations"
-
-className="
-text-sm
-uppercase
-tracking-[0.25em]
-text-gray-600
-hover:text-black
-transition
-duration-300
-"
-
->
-
-Prestations
-
-</Link>
-
-
-
-<Link
-
-to="/reservation"
-
-className="
-px-8
-py-3
-rounded-full
-bg-black
-text-white
-text-sm
-uppercase
-tracking-[0.2em]
-hover:bg-gray-800
-hover:-translate-y-1
-transition
-duration-300
-shadow-md
-"
-
->
-
-Réserver
-
-</Link>
+      </button>
 
 
 
-{session && (
 
-<Link
+      {/* MENU */}
 
-to="/admin"
+      <div
+        className={`
+          
+          md:flex
 
-className="
-text-sm
-uppercase
-tracking-[0.25em]
-text-gray-600
-hover:text-black
-transition
-duration-300
-"
-
->
-
-Planning
-
-</Link>
-
-)}
+          ${
+            menuOpen
+            ? "flex opacity-100 translate-y-0"
+            : "hidden md:flex"
+          }
 
 
+          flex-col
+          md:flex-row
 
-{!session && (
+          items-center
+          justify-center
 
-<Link
-
-to="/login"
-
-className="
-text-sm
-uppercase
-tracking-[0.25em]
-text-gray-600
-hover:text-black
-transition
-duration-300
-"
-
->
-
-Admin
-
-</Link>
-
-)}
+          gap-6
+          md:gap-8
 
 
+          absolute
+          md:static
 
-{session && (
+          top-full
+          left-0
 
-<button
+          w-full
+          md:w-auto
 
-onClick={logout}
 
-className="
-text-sm
-uppercase
-tracking-[0.25em]
-text-gray-600
-hover:text-black
-transition
-duration-300
-"
+          bg-white
+          md:bg-transparent
 
->
 
-Déconnexion
+          py-8
+          md:py-0
 
-</button>
 
-)}
+          shadow-md
+          md:shadow-none
+
+
+          transition-all
+          duration-300
+
+
+          z-40
+
+        `}
+      >
 
 
 
-</nav>
+        <Link
+          to="/"
+          onClick={closeMenu}
+          className="
+            text-sm
+            uppercase
+            tracking-[0.25em]
+            text-gray-600
+            hover:text-black
+            transition
+          "
+        >
+          Accueil
+        </Link>
 
 
-</header>
 
-)
+
+        <Link
+          to="/prestations"
+          onClick={closeMenu}
+          className="
+            text-sm
+            uppercase
+            tracking-[0.25em]
+            text-gray-600
+            hover:text-black
+            transition
+          "
+        >
+          Prestations
+        </Link>
+
+
+
+
+        <Link
+          to="/reservation"
+          onClick={closeMenu}
+          className="
+            px-8
+            py-3
+            rounded-full
+            bg-black
+            text-white
+            text-sm
+            uppercase
+            tracking-[0.2em]
+            hover:bg-gray-800
+            transition
+            shadow-md
+          "
+        >
+          Réserver
+        </Link>
+
+
+
+
+        {!session && (
+
+          <Link
+            to="/login"
+            onClick={closeMenu}
+            className="
+              text-sm
+              uppercase
+              tracking-[0.25em]
+              text-gray-600
+              hover:text-black
+              transition
+            "
+          >
+            Admin
+          </Link>
+
+        )}
+
+
+
+
+
+        {session && (
+
+          <Link
+            to="/admin"
+            onClick={closeMenu}
+            className="
+              text-sm
+              uppercase
+              tracking-[0.25em]
+              text-gray-600
+              hover:text-black
+              transition
+            "
+          >
+            Planning
+          </Link>
+
+        )}
+
+
+
+
+
+        {session && (
+
+          <button
+            onClick={logout}
+            className="
+              text-sm
+              uppercase
+              tracking-[0.25em]
+              text-gray-600
+              hover:text-black
+              transition
+            "
+          >
+            Déconnexion
+          </button>
+
+        )}
+
+
+
+      </div>
+
+
+    </nav>
+
+  )
 
 }
 

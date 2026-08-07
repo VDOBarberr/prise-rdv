@@ -297,7 +297,7 @@ tracking-[0.3em]
 text-black
 ">
 
-THE BARBER CLUB
+VDO BARBER
 
 </h1>
 
@@ -312,7 +312,7 @@ text-xs
 text-gray-500
 ">
 
-Private Grooming Experience
+modern barbering
 
 </p>
 
@@ -369,7 +369,7 @@ text-3xl
 text-white
 ">
 
-Réservez votre séance
+Réservez votre créneau
 
 </h2>
 

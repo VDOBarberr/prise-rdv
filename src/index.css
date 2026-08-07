@@ -1,1 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
 @import "tailwindcss";
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Empêche la sélection du contenu du site */
+
+* {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+/* Empêche la sélection du contenu */
+
+body {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+/* Garde les éléments interactifs parfaitement fonctionnels */
+
+button,
+a,
+input,
+textarea,
+select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+
+/* Permet la saisie dans les formulaires */
+
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+
+/* Empêche le déplacement des images */
+
+img {
+  user-select: none;
+  -webkit-user-drag: none;
+}

@@ -1,261 +1,75 @@
-import { BrowserRouter, Routes, Route, Link, useNavigate } from "react-router-dom"
-import { useEffect, useState } from "react"
+import { BrowserRouter, Routes, Route } from "react-router-dom"
 
-import Services from "./pages/Services"
+import Navbar from "./components/Navbar"
+
 import Home from "./pages/Home"
 import Reservation from "./pages/Reservation"
 import Admin from "./pages/Admin"
 import Login from "./pages/Login"
 import Prestations from "./pages/Prestations"
+
 import ProtectedRoute from "./components/ProtectedRoute"
 
-import { supabase } from "./services/supabase"
 
 
+function App() {
 
-function Navbar() {
+  return (
 
-const navigate = useNavigate()
+    <BrowserRouter>
 
-const [session, setSession] = useState(null)
 
+      <Navbar />
 
 
-useEffect(() => {
+      <Routes>
 
-supabase.auth.getSession()
-.then(({data})=>{
-setSession(data.session)
-})
 
+        <Route
+          path="/"
+          element={<Home />}
+        />
 
-const {data: listener} = supabase.auth.onAuthStateChange(
-(_event, session)=>{
-setSession(session)
-}
-)
 
+        <Route
+          path="/reservation"
+          element={<Reservation />}
+        />
 
-return ()=>{
-listener.subscription.unsubscribe()
-}
 
-},[])
+        <Route
+          path="/prestations"
+          element={<Prestations />}
+        />        <Route
+          path="/login"
+          element={<Login />}
+        />
 
 
 
-async function logout(){
+        <Route
 
-await supabase.auth.signOut()
+          path="/admin"
 
-navigate("/login")
+          element={
 
-}
+            <ProtectedRoute>
 
+              <Admin />
 
+            </ProtectedRoute>
 
-return (
+          }
 
-<header className="
-flex
-items-center
-justify-between
-px-8
-py-6
-">
+        />
 
 
-<Link
-to="/"
-className="
-text-3xl
-font-serif
-font-bold
-tracking-wide
-"
->
-VDO Barber
-</Link>
+      </Routes>
 
 
+    </BrowserRouter>
 
-<nav className="
-flex
-items-center
-gap-8
-">
-
-
-<Link
-to="/"
-className="
-text-xs
-uppercase
-tracking-[0.25em]
-text-gray-600
-hover:text-black
-"
->
-Accueil
-</Link>
-
-
-
-<Link
-to="/prestations"
-className="
-text-xs
-uppercase
-tracking-[0.25em]
-text-gray-600
-hover:text-black
-"
->
-Prestations
-</Link>
-
-
-
-<Link
-to="/reservation"
-className="
-px-7
-py-3
-rounded-full
-bg-black
-text-white
-text-xs
-uppercase
-tracking-[0.25em]
-"
->
-Réserver
-</Link>
-
-
-
-{session && (
-
-<Link
-to="/admin"
-className="
-text-xs
-uppercase
-tracking-[0.25em]
-"
->
-Planning
-</Link>
-
-)}
-
-
-
-{!session && (
-
-<Link
-to="/login"
-className="
-text-xs
-uppercase
-tracking-[0.25em]
-"
->
-Admin
-</Link>
-
-)}
-
-
-
-{session && (
-
-<button
-onClick={logout}
-className="
-text-xs
-uppercase
-tracking-[0.25em]
-"
->
-Déconnexion
-</button>
-
-)}
-
-
-</nav>
-
-
-</header>
-
-)
-
-}
-
-
-
-
-
-function App(){
-
-return (
-
-<BrowserRouter>
-
-
-<Navbar />
-
-
-<Routes>
-
-
-<Route
-path="/"
-element={<Home />}
-/>
-
-
-<Route
-path="/reservation"
-element={<Reservation />}
-/>
-
-
-<Route
-path="/prestations"
-element={<Prestations />}
-/>
-
-
-<Route
-path="/services"
-element={<Services />}
-/>
-
-
-<Route
-path="/login"
-element={<Login />}
-/>
-
-
-<Route
-path="/admin"
-element={
-<ProtectedRoute>
-<Admin />
-</ProtectedRoute>
-}
-/>
-
-
-</Routes>
-
-
-</BrowserRouter>
-
-)
+  )
 
 }
 
