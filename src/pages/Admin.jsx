@@ -2,11 +2,17 @@ import { useEffect, useState } from "react"
 import { supabase } from "../services/supabase"
 
 function Admin() {
+
   const [currentDate, setCurrentDate] = useState(new Date())
+
   const [availability, setAvailability] = useState([])
+
   const [appointments, setAppointments] = useState([])
+
   const [editingAppointment, setEditingAppointment] = useState(null)
+
   const [selectedDay, setSelectedDay] = useState(null)
+
 
   const daysOrder = [
     "lundi",
@@ -17,6 +23,7 @@ function Admin() {
     "samedi",
     "dimanche"
   ]
+
 
   const times = [
     "09h00",
@@ -31,9 +38,13 @@ function Admin() {
     "18h00"
   ]
 
+
+  // ================================
   // CHARGEMENT DES DONNEES
+  // ================================
 
   async function loadData() {
+
     const {
       data: availabilityData,
       error: availabilityError
@@ -41,10 +52,15 @@ function Admin() {
       .from("availability")
       .select("*")
 
+
     if (availabilityError) {
+
       console.log(availabilityError)
+
       return
+
     }
+
 
     const {
       data: appointmentsData,
@@ -53,523 +69,1100 @@ function Admin() {
       .from("appointments")
       .select("*")
 
+
     if (appointmentsError) {
+
       console.log(appointmentsError)
+
       return
+
     }
 
-    setAvailability(availabilityData || [])
-    setAppointments(appointmentsData || [])
+
+    setAvailability(
+      availabilityData || []
+    )
+
+
+    setAppointments(
+      appointmentsData || []
+    )
+
   }
+
 
   useEffect(() => {
+
     loadData()
+
   }, [])
 
+
+  // ================================
   // DATE DU LUNDI
+  // ================================
 
   function getMonday(date) {
+
     const result = new Date(date)
+
     const day = result.getDay()
 
-    const diff = day === 0 ? -6 : 1 - day
+    const diff =
+      day === 0
+        ? -6
+        : 1 - day
 
-    result.setDate(result.getDate() + diff)
+
+    result.setDate(
+      result.getDate() + diff
+    )
+
 
     return result
+
   }
+
+
+  // ================================
+  // FORMAT DATE
+  // ================================
 
   function formatDate(date) {
-    const year = date.getFullYear()
 
-    const month = String(
-      date.getMonth() + 1
-    ).padStart(2, "0")
+    const year =
+      date.getFullYear()
 
-    const day = String(
-      date.getDate()
-    ).padStart(2, "0")
+
+    const month =
+      String(
+        date.getMonth() + 1
+      ).padStart(2, "0")
+
+
+    const day =
+      String(
+        date.getDate()
+      ).padStart(2, "0")
+
 
     return `${year}-${month}-${day}`
+
   }
 
+
+  // ================================
   // CHANGER DE SEMAINE
+  // ================================
 
   function changeWeek(value) {
-    const date = new Date(currentDate)
+
+    const date =
+      new Date(currentDate)
+
 
     date.setDate(
       date.getDate() + value * 7
     )
 
+
     setCurrentDate(date)
+
   }
 
-  // GENERER LES JOURS DE LA SEMAINE
+
+  // ================================
+  // JOURS DE LA SEMAINE
+  // ================================
 
   function getWeekDays() {
-    const monday = getMonday(currentDate)
 
-    return daysOrder.map((day, index) => {
-      const date = new Date(monday)
+    const monday =
+      getMonday(currentDate)
 
-      date.setDate(
-        monday.getDate() + index
-      )
 
-      return {
-        name: day,
-        date: formatDate(date)
+    return daysOrder.map(
+      (day, index) => {
+
+        const date =
+          new Date(monday)
+
+
+        date.setDate(
+          monday.getDate() + index
+        )
+
+
+        return {
+
+          name: day,
+
+          date: formatDate(date)
+
+        }
+
       }
-    })
+    )
+
   }
 
-  // SELECTIONNER UN JOUR
+
+  // ================================
+  // SELECTION JOUR
+  // ================================
 
   function selectDay(day) {
+
     setSelectedDay(day)
+
   }
 
-  // VERIFIER SI UN CRENEAU EXISTE
+
+  // ================================
+  // VERIFIER DISPONIBILITE
+  // ================================
 
   function isAvailable(date, time) {
+
     return availability.some(
       item =>
         item.date === date &&
         item.time === time &&
         item.active === true
     )
+
   }
 
-  // AJOUT DISPONIBILITE
 
-  async function addAvailability(date, time) {
-    if (isAvailable(date, time)) {
+  // ================================
+  // AJOUT DISPONIBILITE
+  // ================================
+
+  async function addAvailability(
+    date,
+    time
+  ) {
+
+    if (
+      isAvailable(
+        date,
+        time
+      )
+    ) {
+
       return
+
     }
 
-    const day = new Date(date)
-      .toLocaleDateString(
-        "fr-FR",
-        {
-          weekday: "long"
-        }
-      )
-      .toLowerCase()
 
-    const { error } = await supabase
+    const day =
+      new Date(date)
+        .toLocaleDateString(
+          "fr-FR",
+          {
+            weekday: "long"
+          }
+        )
+        .toLowerCase()
+
+
+    const {
+      error
+    } = await supabase
       .from("availability")
       .insert({
+
         date: date,
+
         day: day,
+
         time: time,
+
         active: true
+
       })
 
+
     if (error) {
+
       console.log(error)
+
       return
+
     }
 
-    loadData()
+
+    await loadData()
+
   }
 
-  // SUPPRIMER DISPONIBILITE
 
-  async function removeAvailability(date, time) {
-    const { error } = await supabase
+  // ================================
+  // SUPPRIMER DISPONIBILITE
+  // ================================
+
+  async function removeAvailability(
+    date,
+    time
+  ) {
+
+    const {
+      error
+    } = await supabase
       .from("availability")
       .delete()
       .eq("date", date)
       .eq("time", time)
 
+
     if (error) {
+
       console.log(error)
+
       return
+
     }
 
-    loadData()
+
+    await loadData()
+
   }
 
-  // RENDEZ VOUS
 
-  function getAppointment(date, time) {
-    return appointments.find(item => {
-      const appointmentDate =
-        item.date?.split("T")[0]
+  // ================================
+  // TROUVER RENDEZ-VOUS
+  // ================================
 
-      return (
-        appointmentDate === date &&
-        item.time === time
+  function getAppointment(
+    date,
+    time
+  ) {
+
+    return appointments.find(
+      item => {
+
+        const appointmentDate =
+          item.date?.split("T")[0]
+
+
+        return (
+          appointmentDate === date &&
+          item.time === time
+        )
+
+      }
+    )
+
+  }
+
+
+  // ================================
+  // MODIFIER RENDEZ-VOUS
+  // ================================
+
+  async function saveAppointment() {
+
+    if (!editingAppointment) {
+
+      return
+
+    }
+
+
+    const newDate =
+      editingAppointment.date
+        ?.split("T")[0]
+
+
+    const {
+      error
+    } = await supabase
+      .from("appointments")
+      .update({
+
+        name:
+          editingAppointment.name,
+
+        phone:
+          editingAppointment.phone,
+
+        email:
+          editingAppointment.email,
+
+        service:
+          editingAppointment.service,
+
+        date:
+          newDate,
+
+        time:
+          editingAppointment.time
+
+      })
+      .eq(
+        "id",
+        editingAppointment.id
       )
-    })
+
+
+    if (error) {
+
+      console.log(error)
+
+      alert(
+        "Erreur lors de la modification du rendez-vous."
+      )
+
+      return
+
+    }
+
+
+    setEditingAppointment(null)
+
+    await loadData()
+
   }
 
-  return (
-    <div className="min-h-screen bg-[#f5f5f3] text-black px-4 py-8 sm:px-8 lg:px-12">
 
-      <div className="max-w-7xl mx-auto">
+  // ================================
+  // SUPPRIMER RENDEZ-VOUS
+  // ================================
 
-        {/* HEADER */}
+  async function deleteAppointment() {
 
-        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between mb-10">
+    if (!editingAppointment) {
 
-          <div>
-            <div className="text-[10px] uppercase tracking-[0.35em] text-gray-400 mb-3">
-              Administration
-            </div>
+      return
 
-            <h1 className="text-4xl sm:text-5xl font-light tracking-tight">
-              Mon planning
-            </h1>
+    }
 
-            <div className="w-10 h-px bg-black mt-5" />
+
+    const confirmation =
+      window.confirm(
+        "Voulez-vous vraiment supprimer ce rendez-vous ?"
+      )
+
+
+    if (!confirmation) {
+
+      return
+
+    }
+
+
+    const {
+      error
+    } = await supabase
+      .from("appointments")
+      .delete()
+      .eq(
+        "id",
+        editingAppointment.id
+      )
+
+
+    if (error) {
+
+      console.log(error)
+
+      alert(
+        "Erreur lors de la suppression."
+      )
+
+      return
+
+    }
+
+
+    setEditingAppointment(null)
+
+    await loadData()
+
+  }
+
+
+  return (    <div className="max-w-7xl mx-auto">
+
+      {/* HEADER */}
+
+      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between mb-10">
+
+        <div>
+
+          <div className="text-[10px] uppercase tracking-[0.35em] text-gray-400 mb-3">
+            Administration
           </div>
 
-          {/* NAVIGATION */}
+          <h1 className="text-4xl sm:text-5xl font-light tracking-tight">
+            Mon planning
+          </h1>
 
-          <div className="flex items-center gap-2">
-
-            <button
-              onClick={() => changeWeek(-1)}
-              className="w-12 h-12 rounded-full border border-black bg-white flex items-center justify-center text-lg transition hover:bg-black hover:text-white"
-            >
-              ←
-            </button>
-
-            <button
-              onClick={() => changeWeek(1)}
-              className="w-12 h-12 rounded-full bg-black text-white flex items-center justify-center text-lg transition hover:bg-white hover:text-black hover:border hover:border-black"
-            >
-              →
-            </button>
-
-          </div>
+          <div className="w-10 h-px bg-black mt-5" />
 
         </div>
 
-        {/* JOURS */}
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-10">
+        <div className="flex items-center gap-2">
 
-          {getWeekDays().map(day => {
-            const isSelected =
-              selectedDay?.date === day.date
+          <button
+            onClick={() => changeWeek(-1)}
+            className="w-12 h-12 rounded-full border border-black bg-white flex items-center justify-center text-lg transition hover:bg-black hover:text-white"
+          >
+            ←
+          </button>
 
-            return (
-              <button
-                key={day.date}
-                onClick={() => selectDay(day)}
+
+          <button
+            onClick={() => changeWeek(1)}
+            className="w-12 h-12 rounded-full bg-black text-white flex items-center justify-center text-lg transition hover:bg-white hover:text-black hover:border hover:border-black"
+          >
+            →
+          </button>
+
+        </div>
+
+      </div>
+
+
+      {/* JOURS */}
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-10">
+
+        {getWeekDays().map(day => {
+
+          const isSelected =
+            selectedDay?.date === day.date
+
+
+          return (
+
+            <button
+              key={day.date}
+              onClick={() => selectDay(day)}
+              className={`
+                relative
+                text-left
+                p-5
+                min-h-[105px]
+                rounded-[24px]
+                border
+                transition-all
+                duration-300
+
+                ${
+                  isSelected
+                    ? "bg-black text-white border-black shadow-lg"
+                    : "bg-white border-black/10 hover:border-black/30 hover:shadow-md"
+                }
+              `}
+            >
+
+              <div
                 className={`
-                  relative
-                  text-left
-                  p-5
-                  min-h-[105px]
-                  rounded-[24px]
-                  border
-                  transition-all
-                  duration-300
+                  text-[10px]
+                  uppercase
+                  tracking-[0.25em]
+                  mb-4
+
                   ${
                     isSelected
-                      ? "bg-black text-white border-black shadow-lg"
-                      : "bg-white border-black/10 hover:border-black/30 hover:shadow-md"
+                      ? "text-white/50"
+                      : "text-gray-400"
                   }
                 `}
               >
+                Jour
+              </div>
 
-                <div
-                  className={`
-                    text-[10px]
-                    uppercase
-                    tracking-[0.25em]
-                    mb-4
-                    ${
-                      isSelected
-                        ? "text-white/50"
-                        : "text-gray-400"
-                    }
-                  `}
-                >
-                  Jour
-                </div>
 
-                <div className="font-medium text-lg capitalize">
-                  {day.name}
-                </div>
+              <div className="font-medium text-lg capitalize">
+                {day.name}
+              </div>
 
-                <div
-                  className={`
-                    text-sm mt-1
-                    ${
-                      isSelected
-                        ? "text-white/50"
-                        : "text-gray-400"
-                    }
-                  `}
-                >
-                  {day.date}
-                </div>
 
-                {isSelected && (
-                  <div className="absolute top-5 right-5 w-2 h-2 rounded-full bg-white" />
-                )}
+              <div
+                className={`
+                  text-sm mt-1
 
-              </button>
-            )
-          })}
+                  ${
+                    isSelected
+                      ? "text-white/50"
+                      : "text-gray-400"
+                  }
+                `}
+              >
+                {day.date}
+              </div>
+
+
+              {isSelected && (
+
+                <div className="absolute top-5 right-5 w-2 h-2 rounded-full bg-white" />
+
+              )}
+
+            </button>
+
+          )
+
+        })}
+
+      </div>
+
+
+      {/* AUCUN JOUR */}
+
+      {!selectedDay && (
+
+        <div className="bg-white border border-black/10 rounded-[32px] p-12 text-center shadow-sm">
+
+          <div className="w-14 h-14 rounded-full bg-black text-white flex items-center justify-center mx-auto mb-5 text-xl">
+            +
+          </div>
+
+
+          <h2 className="text-xl font-medium">
+            Sélectionnez une journée
+          </h2>
+
+
+          <p className="text-sm text-gray-400 mt-2">
+            Choisissez un jour pour consulter votre planning.
+          </p>
 
         </div>
 
-        {/* SI AUCUN JOUR N'EST SELECTIONNE */}
+      )}
 
-        {!selectedDay && (
-          <div className="bg-white border border-black/10 rounded-[32px] p-12 text-center shadow-sm">
 
-            <div className="w-14 h-14 rounded-full bg-black text-white flex items-center justify-center mx-auto mb-5 text-xl">
-              +
+      {/* JOUR */}
+
+      {selectedDay && (
+
+        <div className="bg-white rounded-[32px] border border-black/10 overflow-hidden shadow-sm">
+
+          <div className="px-6 py-7 sm:px-8 border-b border-black/10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+
+            <div>
+
+              <div className="text-[10px] uppercase tracking-[0.3em] text-gray-400 mb-2">
+                Planning du jour
+              </div>
+
+
+              <h2 className="text-2xl sm:text-3xl font-light tracking-tight capitalize">
+                {selectedDay.name}
+              </h2>
+
             </div>
 
-            <h2 className="text-xl font-medium">
-              Sélectionnez une journée
-            </h2>
 
-            <p className="text-sm text-gray-400 mt-2">
-              Choisissez un jour pour consulter votre planning.
-            </p>
+            <div className="text-sm text-gray-400">
+              {selectedDay.date}
+            </div>
 
           </div>
-        )}
 
-        {/* JOUR SELECTIONNE */}
 
-        {selectedDay && (
-          <div className="bg-white rounded-[32px] border border-black/10 overflow-hidden shadow-sm">
+          {/* CRENEAUX */}
 
-            {/* TITRE */}
+          <div className="divide-y divide-black/5">
 
-            <div className="px-6 py-7 sm:px-8 border-b border-black/10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+            {times.map(time => {
+
+              const active =
+                isAvailable(
+                  selectedDay.date,
+                  time
+                )
+
+
+              const appointment =
+                getAppointment(
+                  selectedDay.date,
+                  time
+                )
+
+
+              return (
+
+                <div
+                  key={time}
+                  className="px-4 py-3 sm:px-8"
+                >
+
+                  {/* RENDEZ-VOUS */}
+
+                  {appointment && (
+
+                    <div className="bg-black text-white rounded-[24px] p-5 sm:p-6">
+
+                      <div className="flex flex-col lg:flex-row lg:items-center gap-5">
+
+                        <div className="lg:w-24 shrink-0">
+
+                          <div className="text-[9px] uppercase tracking-[0.25em] text-white/40 mb-2">
+                            Heure
+                          </div>
+
+                          <div className="text-2xl font-light">
+                            {appointment.time}
+                          </div>
+
+                        </div>
+
+
+                        <div className="hidden lg:block w-px h-14 bg-white/10" />
+
+
+                        <div className="flex-1">
+
+                          <div className="text-[9px] uppercase tracking-[0.25em] text-white/40 mb-2">
+                            Rendez-vous
+                          </div>
+
+                          <div className="text-xl sm:text-2xl font-medium">
+                            {appointment.name}
+                          </div>
+
+                          <div className="text-sm text-white/50 mt-1">
+                            {appointment.service}
+                          </div>
+
+                        </div>
+
+
+                        <div className="lg:border-l border-white/10 lg:pl-6 space-y-2 text-sm text-white/60">
+
+                          <div>
+                            {appointment.phone}
+                          </div>
+
+                          <div className="break-all">
+                            {appointment.email}
+                          </div>
+
+                        </div>
+
+
+                        {/* MODIFIER */}
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditingAppointment({
+                              ...appointment
+                            })
+                          }
+                          className="
+                            shrink-0
+                            px-5
+                            py-3
+                            rounded-full
+                            border
+                            border-white/20
+                            text-white
+                            text-[9px]
+                            uppercase
+                            tracking-[0.2em]
+                            transition
+                            hover:bg-white
+                            hover:text-black
+                          "
+                        >
+                          Modifier
+                        </button>
+
+                      </div>
+
+                    </div>
+
+                  )}
+
+
+                  {/* CRENEAU LIBRE */}
+
+                  {!appointment && (
+
+                    <button
+                      onClick={() => {
+
+                        if (active) {
+
+                          removeAvailability(
+                            selectedDay.date,
+                            time
+                          )
+
+                        } else {
+
+                          addAvailability(
+                            selectedDay.date,
+                            time
+                          )
+
+                        }
+
+                      }}
+                      className={`
+                        w-full
+                        flex
+                        items-center
+                        gap-5
+                        text-left
+                        p-5
+                        rounded-[24px]
+                        border
+                        transition-all
+                        duration-300
+
+                        ${
+                          active
+                            ? "bg-[#f8f8f6] border-black/10 hover:border-black/30 hover:bg-white"
+                            : "bg-white border-dashed border-black/10 hover:border-black/30 hover:bg-[#fafafa]"
+                        }
+                      `}
+                    >
+
+                      <div className="w-20 shrink-0">
+
+                        <div className="text-lg font-medium">
+                          {time}
+                        </div>
+
+                      </div>
+
+
+                      <div
+                        className={`
+                          w-px
+                          h-10
+
+                          ${
+                            active
+                              ? "bg-black/10"
+                              : "bg-black/5"
+                          }
+                        `}
+                      />
+
+
+                      <div className="flex-1">
+
+                        <div className="text-[9px] uppercase tracking-[0.25em] text-gray-400 mb-1">
+                          Disponibilité
+                        </div>
+
+                        <div className="text-sm font-medium">
+                          {active
+                            ? "Créneau ouvert"
+                            : "Créneau fermé"}
+                        </div>
+
+                      </div>
+
+
+                      <div className="flex items-center gap-3 shrink-0">
+
+                        <span className="hidden sm:block text-[9px] uppercase tracking-[0.2em] text-gray-400">
+                          {active
+                            ? "Ouvert"
+                            : "Fermé"}
+                        </span>
+
+
+                        <div
+                          className={`
+                            w-9
+                            h-9
+                            rounded-full
+                            flex
+                            items-center
+                            justify-center
+
+                            ${
+                              active
+                                ? "bg-black text-white"
+                                : "bg-gray-100 text-gray-400"
+                            }
+                          `}
+                        >
+                          {active ? "✓" : "+"}
+                        </div>
+
+                      </div>
+
+                    </button>
+
+                  )}
+
+                </div>
+
+              )
+
+            })}
+
+          </div>
+
+        </div>
+
+      )}
+
+
+      {/* ================================ */}
+      {/* MODALE MODIFICATION */}
+      {/* ================================ */}
+
+      {editingAppointment && (
+
+        <div className="fixed inset-0 z-[999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-5">
+
+          <div className="w-full max-w-lg bg-white rounded-[32px] p-7 sm:p-10 shadow-2xl max-h-[90vh] overflow-y-auto">
+
+
+            <div className="flex items-start justify-between mb-8">
 
               <div>
 
-                <div className="text-[10px] uppercase tracking-[0.3em] text-gray-400 mb-2">
-                  Planning du jour
+                <div className="text-[9px] uppercase tracking-[0.3em] text-gray-400 mb-2">
+                  Administration
                 </div>
 
-                <h2 className="text-2xl sm:text-3xl font-light capitalize tracking-tight">
-                  {selectedDay.name}
+                <h2 className="text-3xl font-light">
+                  Modifier le rendez-vous
                 </h2>
 
               </div>
 
-              <div className="text-sm text-gray-400">
-                {selectedDay.date}
-              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setEditingAppointment(null)
+                }
+                className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-black hover:text-white transition"
+              >
+                ×
+              </button>
 
             </div>
 
-            {/* CRENEAUX */}
 
-            <div className="divide-y divide-black/5">
+            <div className="space-y-5">
 
-              {times.map(time => {
-                const active = isAvailable(
-                  selectedDay.date,
-                  time
-                )
 
-                const appointment = getAppointment(
-                  selectedDay.date,
-                  time
-                )
+              {/* NOM */}
 
-                return (
-                  <div
-                    key={time}
-                    className="px-4 py-3 sm:px-8"
-                  >
+              <div>
 
-                    {/* RENDEZ VOUS */}
+                <label className="block text-[9px] uppercase tracking-[0.3em] text-gray-400 mb-2">
+                  Nom
+                </label>
 
-                    {appointment && (
-                      <div className="bg-black text-white rounded-[24px] p-5 sm:p-6">
+                <input
+                  type="text"
+                  value={
+                    editingAppointment.name || ""
+                  }
+                  onChange={(e) =>
+                    setEditingAppointment({
+                      ...editingAppointment,
+                      name: e.target.value
+                    })
+                  }
+                  className="w-full bg-[#FAFAF8] border border-gray-200 p-4 rounded-xl outline-none focus:border-black"
+                />
 
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+              </div>
 
-                          {/* HEURE */}
 
-                          <div className="sm:w-24 shrink-0">
+              {/* TELEPHONE */}
 
-                            <div className="text-[9px] uppercase tracking-[0.25em] text-white/40 mb-2">
-                              Heure
-                            </div>
+              <div>
 
-                            <div className="text-2xl font-light">
-                              {time}
-                            </div>
+                <label className="block text-[9px] uppercase tracking-[0.3em] text-gray-400 mb-2">
+                  Téléphone
+                </label>
 
-                          </div>
+                <input
+                  type="tel"
+                  value={
+                    editingAppointment.phone || ""
+                  }
+                  onChange={(e) =>
+                    setEditingAppointment({
+                      ...editingAppointment,
+                      phone: e.target.value
+                    })
+                  }
+                  className="w-full bg-[#FAFAF8] border border-gray-200 p-4 rounded-xl outline-none focus:border-black"
+                />
 
-                          <div className="hidden sm:block w-px h-14 bg-white/10" />
+              </div>
 
-                          {/* CLIENT */}
 
-                          <div className="flex-1">
+              {/* EMAIL */}
 
-                            <div className="text-[9px] uppercase tracking-[0.25em] text-white/40 mb-2">
-                              Rendez-vous
-                            </div>
+              <div>
 
-                            <div className="text-xl sm:text-2xl font-medium">
-                              {appointment.name}
-                            </div>
+                <label className="block text-[9px] uppercase tracking-[0.3em] text-gray-400 mb-2">
+                  Email
+                </label>
 
-                            <div className="text-sm text-white/50 mt-1">
-                              {appointment.service}
-                            </div>
+                <input
+                  type="email"
+                  value={
+                    editingAppointment.email || ""
+                  }
+                  onChange={(e) =>
+                    setEditingAppointment({
+                      ...editingAppointment,
+                      email: e.target.value
+                    })
+                  }
+                  className="w-full bg-[#FAFAF8] border border-gray-200 p-4 rounded-xl outline-none focus:border-black"
+                />
 
-                          </div>
+              </div>
 
-                          {/* CONTACT */}
 
-                          <div className="sm:border-l border-white/10 sm:pl-6 space-y-2 text-sm text-white/60">
+              {/* DATE */}
 
-                            <div>
-                              {appointment.phone}
-                            </div>
+              <div>
 
-                            <div className="break-all">
-                              {appointment.email}
-                            </div>
+                <label className="block text-[9px] uppercase tracking-[0.3em] text-gray-400 mb-2">
+                  Date
+                </label>
 
-                          </div>
+                <input
+                  type="date"
+                  value={
+                    editingAppointment.date
+                      ?.split("T")[0] || ""
+                  }
+                  onChange={(e) =>
+                    setEditingAppointment({
+                      ...editingAppointment,
+                      date: e.target.value
+                    })
+                  }
+                  className="w-full bg-[#FAFAF8] border border-gray-200 p-4 rounded-xl outline-none focus:border-black"
+                />
 
-                        </div>
+              </div>
 
-                      </div>
-                    )}
 
-                    {/* CRENEAU SANS RENDEZ VOUS */}
+              {/* HEURE */}
 
-                    {!appointment && (
-                      <button
-                        onClick={() => {
-                          if (active) {
-                            removeAvailability(
-                              selectedDay.date,
-                              time
-                            )
-                          } else {
-                            addAvailability(
-                              selectedDay.date,
-                              time
-                            )
-                          }
-                        }}
-                        className={`
-                          w-full
-                          flex
-                          items-center
-                          gap-5
-                          text-left
-                          p-5
-                          rounded-[24px]
-                          border
-                          transition-all
-                          duration-300
-                          ${
-                            active
-                              ? "bg-[#f8f8f6] border-black/10 hover:border-black/30 hover:bg-white"
-                              : "bg-white border-dashed border-black/10 hover:border-black/30 hover:bg-[#fafafa]"
-                          }
-                        `}
-                      >
+              <div>
 
-                        {/* HEURE */}
+                <label className="block text-[9px] uppercase tracking-[0.3em] text-gray-400 mb-2">
+                  Heure
+                </label>
 
-                        <div className="w-20 shrink-0">
+                <select
+                  value={
+                    editingAppointment.time || ""
+                  }
+                  onChange={(e) =>
+                    setEditingAppointment({
+                      ...editingAppointment,
+                      time: e.target.value
+                    })
+                  }
+                  className="w-full bg-[#FAFAF8] border border-gray-200 p-4 rounded-xl outline-none focus:border-black"
+                >
 
-                          <div className="text-lg font-medium">
-                            {time}
-                          </div>
+                  {times.map(timeOption => (
 
-                        </div>
+                    <option
+                      key={timeOption}
+                      value={timeOption}
+                    >
+                      {timeOption}
+                    </option>
 
-                        {/* SEPARATEUR */}
+                  ))}
 
-                        <div
-                          className={`
-                            w-px
-                            h-10
-                            ${
-                              active
-                                ? "bg-black/10"
-                                : "bg-black/5"
-                            }
-                          `}
-                        />
+                </select>
 
-                        {/* STATUT */}
+              </div>
 
-                        <div className="flex-1">
 
-                          <div className="text-[9px] uppercase tracking-[0.25em] text-gray-400 mb-1">
-                            Disponibilité
-                          </div>
+              {/* PRESTATION */}
 
-                          <div className="text-sm font-medium">
-                            {active
-                              ? "Créneau ouvert"
-                              : "Créneau fermé"}
-                          </div>
+              <div>
 
-                        </div>
+                <label className="block text-[9px] uppercase tracking-[0.3em] text-gray-400 mb-2">
+                  Prestation
+                </label>
 
-                        {/* BOUTON */}
+                <input
+                  type="text"
+                  value={
+                    editingAppointment.service || ""
+                  }
+                  onChange={(e) =>
+                    setEditingAppointment({
+                      ...editingAppointment,
+                      service: e.target.value
+                    })
+                  }
+                  className="w-full bg-[#FAFAF8] border border-gray-200 p-4 rounded-xl outline-none focus:border-black"
+                />
 
-                        <div className="flex items-center gap-3 shrink-0">
+              </div>
 
-                          <span className="hidden sm:block text-[9px] uppercase tracking-[0.2em] text-gray-400">
-                            {active
-                              ? "Ouvert"
-                              : "Fermé"}
-                          </span>
 
-                          <div
-                            className={`
-                              w-9
-                              h-9
-                              rounded-full
-                              flex
-                              items-center
-                              justify-center
-                              ${
-                                active
-                                  ? "bg-black text-white"
-                                  : "bg-gray-100 text-gray-400"
-                              }
-                            `}
-                          >
-                            {active ? "✓" : "+"}
-                          </div>
+              {/* BOUTONS */}
 
-                        </div>
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
 
-                      </button>
-                    )}
 
-                  </div>
-                )
-              })}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditingAppointment(null)
+                  }
+                  className="flex-1 border border-gray-200 py-4 rounded-full text-[10px] uppercase tracking-[0.2em] hover:border-black transition"
+                >
+                  Annuler
+                </button>
+
+
+                <button
+                  type="button"
+                  onClick={saveAppointment}
+                  className="flex-1 bg-black text-white py-4 rounded-full text-[10px] uppercase tracking-[0.2em] hover:bg-gray-800 transition"
+                >
+                  Enregistrer
+                </button>
+
+              </div>
+
+
+              {/* SUPPRIMER */}
+
+              <button
+                type="button"
+                onClick={deleteAppointment}
+                className="w-full border border-red-200 text-red-500 py-4 rounded-full text-[10px] uppercase tracking-[0.2em] hover:bg-red-500 hover:text-white transition"
+              >
+                Supprimer le rendez-vous
+              </button>
 
             </div>
 
           </div>
-        )}
 
-      </div>
+        </div>
+
+      )}
 
     </div>
   )
+
 }
 
 export default Admin
