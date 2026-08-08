@@ -9,15 +9,12 @@ function Navbar() {
   const [session, setSession] = useState(null)
   const [menuOpen, setMenuOpen] = useState(false)
 
-
-
   useEffect(() => {
 
     supabase.auth.getSession()
       .then(({ data }) => {
         setSession(data.session)
       })
-
 
     const {
       data: listener
@@ -27,33 +24,24 @@ function Navbar() {
       }
     )
 
-
     return () => {
       listener.subscription.unsubscribe()
     }
 
   }, [])
 
-
-
   async function logout() {
 
     await supabase.auth.signOut()
 
     navigate("/login")
-
   }
-
-
 
   function closeMenu() {
     setMenuOpen(false)
   }
 
-
-
   return (
-
     <nav
       className="
         w-full
@@ -67,55 +55,52 @@ function Navbar() {
       "
     >
 
-
-      {/* LOGO TEXTE */}
+      {/* LOGO */}
 
       <Link
-  to="/"
-  className="
-    text-black
-    whitespace-nowrap
-    transition
-    duration-300
-    hover:opacity-70
-    flex
-    flex-col
-    items-start
-  "
->
+        to="/"
+        onClick={closeMenu}
+        className="
+          text-black
+          whitespace-nowrap
+          transition
+          duration-300
+          hover:opacity-70
+          flex
+          flex-col
+          items-start
+        "
+      >
 
-  <span
-    className="
-      text-3xl
-      md:text-4xl
-      font-serif
-      font-semibold
-      tracking-[0.35em]
-    "
-  >
-    VDO
-  </span>
+        <span
+          className="
+            text-3xl
+            md:text-4xl
+            font-serif
+            font-semibold
+            tracking-[0.35em]
+          "
+        >
+          VDO
+        </span>
 
+        <span
+          className="
+            text-xs
+            md:text-sm
+            uppercase
+            tracking-[0.7em]
+            text-gray-600
+            ml-1
+          "
+        >
+          Barber
+        </span>
 
-  <span
-    className="
-      text-xs
-      md:text-sm
-      uppercase
-      tracking-[0.7em]
-      text-gray-600
-      ml-1
-    "
-  >
-    Barber
-  </span>
-
-
-</Link>
-
+      </Link>
 
 
-      {/* BOUTON HAMBURGER MOBILE */}
+      {/* MENU MOBILE */}
 
       <button
         onClick={() => setMenuOpen(!menuOpen)}
@@ -135,11 +120,7 @@ function Navbar() {
             bg-black
             transition-all
             duration-300
-
-            ${menuOpen
-              ? "rotate-45 translate-y-2"
-              : ""
-            }
+            ${menuOpen ? "rotate-45 translate-y-2" : ""}
           `}
         />
 
@@ -150,11 +131,7 @@ function Navbar() {
             bg-black
             transition-all
             duration-300
-
-            ${menuOpen
-              ? "opacity-0"
-              : ""
-            }
+            ${menuOpen ? "opacity-0" : ""}
           `}
         />
 
@@ -165,32 +142,24 @@ function Navbar() {
             bg-black
             transition-all
             duration-300
-
-            ${menuOpen
-              ? "-rotate-45 -translate-y-2"
-              : ""
-            }
+            ${menuOpen ? "-rotate-45 -translate-y-2" : ""}
           `}
         />
 
       </button>
 
 
-
-
       {/* MENU */}
 
       <div
         className={`
-          
           md:flex
 
           ${
             menuOpen
-            ? "flex opacity-100 translate-y-0"
-            : "hidden md:flex"
+              ? "flex opacity-100 translate-y-0"
+              : "hidden md:flex"
           }
-
 
           flex-col
           md:flex-row
@@ -201,7 +170,6 @@ function Navbar() {
           gap-6
           md:gap-8
 
-
           absolute
           md:static
 
@@ -211,29 +179,23 @@ function Navbar() {
           w-full
           md:w-auto
 
-
           bg-white
           md:bg-transparent
-
 
           py-8
           md:py-0
 
-
           shadow-md
           md:shadow-none
-
 
           transition-all
           duration-300
 
-
           z-40
-
         `}
       >
 
-
+        {/* ACCUEIL */}
 
         <Link
           to="/"
@@ -251,7 +213,7 @@ function Navbar() {
         </Link>
 
 
-
+        {/* PRESTATIONS */}
 
         <Link
           to="/prestations"
@@ -269,7 +231,25 @@ function Navbar() {
         </Link>
 
 
+        {/* MES RENDEZ-VOUS */}
 
+        <Link
+          to="/mes-rendez-vous"
+          onClick={closeMenu}
+          className="
+            text-sm
+            uppercase
+            tracking-[0.25em]
+            text-gray-600
+            hover:text-black
+            transition
+          "
+        >
+          Mes rendez-vous
+        </Link>
+
+
+        {/* RESERVER */}
 
         <Link
           to="/reservation"
@@ -292,7 +272,7 @@ function Navbar() {
         </Link>
 
 
-
+        {/* ADMIN */}
 
         {!session && (
 
@@ -314,8 +294,7 @@ function Navbar() {
         )}
 
 
-
-
+        {/* PLANNING */}
 
         {session && (
 
@@ -337,8 +316,7 @@ function Navbar() {
         )}
 
 
-
-
+        {/* DECONNEXION */}
 
         {session && (
 
@@ -358,16 +336,10 @@ function Navbar() {
 
         )}
 
-
-
       </div>
 
-
     </nav>
-
   )
-
 }
-
 
 export default Navbar

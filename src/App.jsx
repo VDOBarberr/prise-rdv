@@ -9,7 +9,7 @@ import Login from "./pages/Login"
 import Prestations from "./pages/Prestations"
 import Booking from "./pages/Booking"
 import ProtectedRoute from "./components/ProtectedRoute"
-
+import MesRendezVous from "./pages/MesRendezVous"
 
 function App(){
 
@@ -46,6 +46,10 @@ path="/login"
 element={<Login />}
 />
 
+<Route
+  path="/mes-rendez-vous"
+  element={<MesRendezVous />}
+/>
 
 <Route
 path="/admin"
