@@ -1,924 +1,292 @@
+import React from "react";
+
 function Prestations() {
-
   const coupes = [
-
     {
       name: "Burst Fade",
+      price: "15 €",
       description:
         "Un dégradé arrondi autour de l’oreille pour un style moderne, marqué et tendance.",
       image: "/images/burst-fade.jpg"
     },
-
     {
       name: "Taper Fade",
+      price: "15 €",
       description:
         "Un dégradé discret sur les tempes et la nuque pour une finition propre et élégante.",
       image: "/images/taper-fade.jpg"
     },
-
     {
       name: "Mid Fade",
+      price: "15 €",
       description:
         "Un dégradé intermédiaire qui apporte un équilibre parfait entre volume et précision.",
       image: "/images/mid-fade.jpg"
     }
-
-  ]
-
+  ];
 
   return (
+    <div className="min-h-screen bg-[#F8F9FA] text-[#070709] overflow-hidden relative selection:bg-black selection:text-white font-sans">
 
-    <div className="
-      min-h-screen
-      bg-[#FAFAF8]
-      text-black
-      overflow-hidden
-    ">
-
-
+      {/* DÉFINITION DES STYLES ET ANIMATIONS ULTRA-MODERNES */}
       <style>{`
-
-        @keyframes prestationsFadeUp {
-
-          0% {
-            opacity: 0;
-            transform: translateY(35px);
-          }
-
-          100% {
-            opacity: 1;
-            transform: translateY(0);
-          }
-
+        @keyframes rotateSlow {
+          0% { transform: rotate(0deg) scale(1); }
+          50% { transform: rotate(180deg) scale(1.1); }
+          100% { transform: rotate(360deg) scale(1); }
         }
 
-
-        @keyframes prestationsScale {
-
-          0% {
-            opacity: 0;
-            transform: scale(.96);
-          }
-
-          100% {
-            opacity: 1;
-            transform: scale(1);
-          }
-
+        @keyframes marqueeSlow {
+          0% { transform: translateX(0%); }
+          100% { transform: translateX(-50%); }
         }
 
-
-        @keyframes prestationsImage {
-
-          0% {
-            transform: scale(1.08);
-          }
-
-          100% {
-            transform: scale(1);
-          }
-
+        @keyframes lightSweep {
+          0% { transform: translateX(-150%) skewX(-25deg); }
+          100% { transform: translateX(250%) skewX(-25deg); }
         }
 
+        .anim-rotate { animation: rotateSlow 25s linear infinite; }
+        .anim-marquee { animation: marqueeSlow 18s linear infinite; }
 
-        @keyframes prestationsShimmer {
-
-          0% {
-            transform: translateX(-120%);
-          }
-
-          100% {
-            transform: translateX(120%);
-          }
-
+        /* Carte de luxe interactive */
+        .card-luxury {
+          background: rgba(255, 255, 255, 0.8);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-
-        .prestations-fade-up {
-          animation:
-            prestationsFadeUp
-            .9s
-            cubic-bezier(.22,1,.36,1)
-            both;
+        .card-luxury:hover {
+          transform: translateY(-12px);
+          background: rgba(255, 255, 255, 1);
+          border-color: rgba(0, 0, 0, 0.2);
+          box-shadow: 0 35px 70px rgba(0, 0, 0, 0.1);
         }
 
-
-        .prestations-scale {
-          animation:
-            prestationsScale
-            .9s
-            cubic-bezier(.22,1,.36,1)
-            both;
+        /* Zoom dynamique sur image */
+        .img-zoom {
+          transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-
-        .prestations-card {
-
-          transition:
-            transform .6s cubic-bezier(.22,1,.36,1),
-            box-shadow .6s cubic-bezier(.22,1,.36,1),
-            border-color .4s ease;
-
-        }
-
-
-        .prestations-card:hover {
-
-          transform: translateY(-10px);
-
-          box-shadow:
-            0 30px 80px rgba(0,0,0,.13);
-
-          border-color: #d4d4d0;
-
-        }
-
-
-        .prestations-image {
-
-          transition:
-            transform .9s cubic-bezier(.22,1,.36,1);
-
-        }
-
-
-        .prestations-card:hover .prestations-image {
-
-          transform: scale(1.06);
-
-        }
-
-
-        .prestations-overlay {
-
-          transition:
-            opacity .5s ease;
-
-        }
-
-
-        .prestations-card:hover .prestations-overlay {
-
-          opacity: .18;
-
-        }
-
-
-        .prestations-number {
-
-          transition:
-            background-color .5s ease,
-            color .5s ease,
-            transform .5s cubic-bezier(.22,1,.36,1);
-
-        }
-
-
-        .prestations-card:hover .prestations-number {
-
-          background: #000;
-
-          color: #fff;
-
+        .card-luxury:hover .img-zoom {
           transform: scale(1.08);
-
         }
 
-
-        .prestations-arrow {
-
-          transition:
-            transform .5s cubic-bezier(.22,1,.36,1),
-            opacity .4s ease;
-
+        /* Animation badge prix */
+        .price-badge {
+          background: #070709;
+          color: #FFFFFF;
+          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-
-        .prestations-card:hover .prestations-arrow {
-
-          transform:
-            translate(4px, -4px);
-
+        .card-luxury:hover .price-badge {
+          transform: scale(1.1) rotate(-3deg);
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
         }
 
+        /* Animation flèche interactive */
+        .arrow-btn {
+          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
 
-        .prestations-shimmer {
+        .card-luxury:hover .arrow-btn {
+          transform: translate(4px, -4px) scale(1.1);
+          background-color: #070709;
+          color: #FFFFFF;
+        }
 
+        /* Animation des Boutons de Réservation */
+        .btn-badass {
           position: relative;
-
           overflow: hidden;
-
+          transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+          user-select: none;
         }
 
-
-        .prestations-shimmer::after {
-
-          content: "";
-
+        .btn-badass::before {
+          content: '';
           position: absolute;
-
-          top: 0;
-          left: 0;
-
-          width: 40%;
-          height: 100%;
-
-          background:
-            linear-gradient(
-              90deg,
-              transparent,
-              rgba(255,255,255,.3),
-              transparent
-            );
-
-          transform:
-            translateX(-120%);
-
-          pointer-events: none;
-
+          top: -50%;
+          left: -50%;
+          width: 50%;
+          height: 200%;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.45),
+            transparent
+          );
+          transform: translateX(-150%) skewX(-25deg);
         }
 
-
-        .prestations-shimmer:hover::after {
-
-          animation:
-            prestationsShimmer
-            .9s
-            ease;
-
+        .btn-badass:hover::before {
+          animation: lightSweep 0.85s ease-in-out infinite;
         }
 
+        .btn-badass:hover {
+          transform: translateY(-4px) scale(1.03);
+          box-shadow: 0 20px 40px -10px rgba(7, 7, 9, 0.35);
+        }
+
+        .btn-badass:active {
+          transform: translateY(2px) scale(0.93) !important;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
+        }
       `}</style>
 
+      {/* ARRIÈRE-PLAN ANIMÉ & DYNAMIQUE */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[650px] bg-black/[0.025] rounded-full blur-[140px] anim-rotate" />
+        <div 
+          className="absolute inset-0 opacity-[0.04]" 
+          style={{ backgroundImage: 'radial-gradient(#000000 1px, transparent 1px)', backgroundSize: '32px 32px' }} 
+        />
+      </div>
 
-
-      {/* ================================= */}
-      {/* HERO */}
-      {/* ================================= */}
-
-      <section className="
-        relative
-        min-h-[75vh]
-        flex
-        items-center
-        px-5
-        md:px-10
-        py-24
-        overflow-hidden
-      ">
-
-
-        {/* Décor */}
-
-        <div className="
-          pointer-events-none
-          absolute
-          top-[-180px]
-          left-1/2
-          -translate-x-1/2
-          h-[550px]
-          w-[550px]
-          rounded-full
-          bg-black/[0.025]
-          blur-[130px]
-        " />
-
-
-        <div className="
-          pointer-events-none
-          absolute
-          bottom-[-200px]
-          right-[-150px]
-          h-[500px]
-          w-[500px]
-          rounded-full
-          bg-black/[0.02]
-          blur-[120px]
-        " />
-
-
-        <div className="
-          relative
-          z-10
-          max-w-6xl
-          mx-auto
-          w-full
-        ">
-
-
-          <div className="
-            max-w-3xl
-            prestations-fade-up
-          ">
-
-
-            <div className="
-              flex
-              items-center
-              gap-4
-              mb-8
-            ">
-
-              <span className="
-                text-[9px]
-                uppercase
-                tracking-[0.45em]
-                text-gray-400
-              ">
-                03
-              </span>
-
-
-              <div className="
-                h-px
-                w-12
-                bg-black
-              " />
-
-
-              <span className="
-                text-[9px]
-                uppercase
-                tracking-[0.45em]
-                text-gray-400
-              ">
-                VDO Barber
-              </span>
-
-            </div>
-
-
-
-            <p className="
-              text-[10px]
-              uppercase
-              tracking-[0.45em]
-              text-gray-400
-              mb-5
-            ">
-              Prestations
-            </p>
-
-
-
-            <h1 className="
-              font-serif
-              text-6xl
-              sm:text-7xl
-              md:text-8xl
-              leading-[.88]
-              tracking-[-0.05em]
-            ">
-
-              L'art
-
-              <span className="
-                block
-                italic
-                font-normal
-                text-gray-500
-                mt-3
-              ">
-                du Fade
-              </span>
-
-            </h1>
-
-
-
-            <div className="
-              h-px
-              bg-black/15
-              my-9
-              max-w-xl
-            " />
-
-
-
-            <p className="
-              max-w-2xl
-              text-sm
-              md:text-base
-              leading-8
-              text-gray-500
-            ">
-
-              Découvrez nos différentes techniques de dégradé,
-              réalisées avec précision pour s'adapter à votre
-              style et à votre personnalité.
-
-            </p>
-
-          </div>
-
-
-
-          {/* Indicateur */}
-
-          <div className="
-            mt-16
-            flex
-            items-center
-            gap-5
-            text-gray-400
-          ">
-
-            <div className="
-              h-10
-              w-px
-              bg-gradient-to-b
-              from-black
-              to-transparent
-            " />
-
-
-            <span className="
-              text-[8px]
-              uppercase
-              tracking-[0.4em]
-            ">
-              Découvrir nos coupes
-            </span>
-
-          </div>
-
+      {/* HERO SECTION */}
+      <section className="relative z-10 min-h-[65vh] flex flex-col justify-center items-center text-center px-6 pt-16 pb-12">
+        <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full border border-black/10 bg-black/5 backdrop-blur-md text-[10px] tracking-[0.35em] uppercase text-gray-600 font-extrabold mb-8 transition-transform duration-300 hover:scale-105 cursor-default">
+          <span className="w-1.5 h-1.5 rounded-full bg-black" />
+          Haute Coiffure • VDO Barber
         </div>
 
+        <h1 className="font-serif text-6xl sm:text-8xl md:text-9xl font-black uppercase tracking-tighter leading-none text-[#070709]">
+          L'art <span className="text-transparent bg-clip-text bg-gradient-to-b from-black via-gray-700 to-gray-400 italic font-light block sm:inline">du Fade</span>
+        </h1>
+
+        <p className="max-w-xl text-gray-600 text-sm md:text-base font-light tracking-wide mt-8 leading-relaxed">
+          Découvrez nos différentes techniques de dégradé, réalisées avec précision et exigence pour s'adapter parfaitement à votre style.
+        </p>
       </section>
 
+      {/* BANDEAU DÉFILANT MARQUEE */}
+      <div className="relative z-10 py-5 border-y border-black/10 bg-black/[0.02] overflow-hidden whitespace-nowrap mb-20">
+        <div className="inline-block anim-marquee">
+          <span className="text-xl md:text-3xl font-serif font-black uppercase tracking-widest text-black/20 mx-8">BURST FADE</span>
+          <span className="text-xl md:text-3xl font-serif italic text-black/50 mx-8">·</span>
+          <span className="text-xl md:text-3xl font-serif font-black uppercase tracking-widest text-black/20 mx-8">TAPER FADE</span>
+          <span className="text-xl md:text-3xl font-serif italic text-black/50 mx-8">·</span>
+          <span className="text-xl md:text-3xl font-serif font-black uppercase tracking-widest text-black/20 mx-8">MID FADE</span>
+          <span className="text-xl md:text-3xl font-serif italic text-black/50 mx-8">·</span>
+          <span className="text-xl md:text-3xl font-serif font-black uppercase tracking-widest text-black/20 mx-8">BURST FADE</span>
+          <span className="text-xl md:text-3xl font-serif italic text-black/50 mx-8">·</span>
+        </div>
+      </div>
 
+      {/* SECTION GRILLE DE COUPES & PRESTATIONS */}
+      <section className="relative z-10 px-6 md:px-12 pb-32 max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-8">
+          {coupes.map((coupe, index) => (
+            <div
+              key={index}
+              className="card-luxury rounded-[2.5rem] overflow-hidden flex flex-col justify-between group relative"
+            >
+              {/* VISUEL / IMAGE */}
+              <div className="relative h-[400px] md:h-[440px] overflow-hidden bg-gray-200">
+                <img
+                  src={coupe.image}
+                  alt={coupe.name}
+                  className="img-zoom w-full h-full object-cover"
+                />
 
-      {/* ================================= */}
-      {/* COUPES */}
-      {/* ================================= */}
+                {/* OVERLAY DE VIGNETTAGE AU HOVER */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
 
-      <section className="
-        relative
-        px-5
-        md:px-10
-        pb-28
-        md:pb-40
-      ">
-
-
-        <div className="
-          max-w-6xl
-          mx-auto
-        ">
-
-
-          <div className="
-            grid
-            md:grid-cols-3
-            gap-6
-          ">
-
-
-            {coupes.map((coupe, index) => (
-
-              <div
-                key={index}
-                className="
-                  prestations-card
-                  group
-                  relative
-                  bg-white
-                  rounded-[2rem]
-                  overflow-hidden
-                  border
-                  border-gray-100
-                  prestations-scale
-                "
-                style={{
-                  animationDelay: `${index * 120}ms`
-                }}
-              >
-
-
-                {/* IMAGE */}
-
-                <div className="
-                  relative
-                  h-[420px]
-                  md:h-[460px]
-                  overflow-hidden
-                  bg-gray-100
-                ">
-
-
-                  <img
-                    src={coupe.image}
-                    alt={coupe.name}
-                    className="
-                      prestations-image
-                      w-full
-                      h-full
-                      object-cover
-                    "
-                  />
-
-
-                  {/* Overlay */}
-
-                  <div className="
-                    prestations-overlay
-                    absolute
-                    inset-0
-                    bg-black
-                    opacity-0
-                  " />
-
-
-                  {/* Numéro */}
-
-                  <div className="
-                    absolute
-                    top-6
-                    left-6
-                  ">
-
-                    <div className="
-                      prestations-number
-                      h-11
-                      w-11
-                      rounded-full
-                      bg-white/90
-                      backdrop-blur-sm
-                      flex
-                      items-center
-                      justify-center
-                      text-[10px]
-                      font-medium
-                    ">
-
-                      0{index + 1}
-
-                    </div>
-
+                {/* NUMÉRO DE STYLE */}
+                <div className="absolute top-6 left-6">
+                  <div className="price-badge px-4 py-2 rounded-full text-xs font-black tracking-widest uppercase">
+                    0{index + 1}
                   </div>
-
-
-                  {/* Flèche */}
-
-                  <div className="
-                    absolute
-                    top-6
-                    right-6
-                    h-11
-                    w-11
-                    rounded-full
-                    bg-white/90
-                    backdrop-blur-sm
-                    flex
-                    items-center
-                    justify-center
-                    text-lg
-                    prestations-arrow
-                  ">
-
-                    ↗
-
-                  </div>
-
                 </div>
 
+                {/* BOUTON FLÈCHE INTERACTIF */}
+                <a
+                  href="/reservation"
+                  className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center text-black font-bold text-lg shadow-lg arrow-btn"
+                >
+                  ↗
+                </a>
 
-
-                {/* CONTENU */}
-
-                <div className="
-                  p-7
-                  md:p-9
-                ">
-
-
-                  <div className="
-                    flex
-                    items-center
-                    gap-4
-                    mb-5
-                  ">
-
-                    <div className="
-                      h-px
-                      w-8
-                      bg-black
-                    " />
-
-                    <span className="
-                      text-[8px]
-                      uppercase
-                      tracking-[0.35em]
-                      text-gray-400
-                    ">
-                      VDO Barber
-                    </span>
-
-                  </div>
-
-
-
-                  <h2 className="
-                    font-serif
-                    text-3xl
-                    md:text-4xl
-                    mb-4
-                  ">
-
-                    {coupe.name}
-
-                  </h2>
-
-
-
-                  <p className="
-                    text-sm
-                    leading-7
-                    text-gray-400
-                  ">
-
-                    {coupe.description}
-
-                  </p>
-
-
+                {/* BADGE PRIX FIXÉ SUR L'IMAGE */}
+                <div className="absolute bottom-6 left-6">
+                  <span className="bg-white/90 backdrop-blur-md text-black font-black text-lg px-5 py-2 rounded-full shadow-lg">
+                    {coupe.price}
+                  </span>
                 </div>
-
-
               </div>
 
-            ))}
+              {/* CONTENU TEXTE */}
+              <div className="p-8 md:p-10 flex flex-col justify-between flex-1">
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="w-2 h-2 rounded-full bg-black/40 group-hover:bg-black transition-colors" />
+                    <span className="text-[10px] uppercase tracking-[0.35em] text-gray-500 font-extrabold">
+                      Coiffure
+                    </span>
+                  </div>
 
-          </div>
+                  <h3 className="font-serif text-3xl font-bold mb-4 text-[#070709] transition-transform duration-300 group-hover:translate-x-1">
+                    {coupe.name}
+                  </h3>
 
+                  <p className="text-gray-600 text-sm font-light leading-relaxed mb-8">
+                    {coupe.description}
+                  </p>
+                </div>
+
+                {/* CTA DE RÉSERVATION DANS LA CARTE */}
+                <a
+                  href="/reservation"
+                  className="btn-badass w-full bg-[#070709] text-white text-center text-[10px] font-black uppercase tracking-[0.25em] py-4 rounded-xl shadow-lg"
+                >
+                  Réserver ce style
+                </a>
+              </div>
+            </div>
+          ))}
         </div>
-
       </section>
 
+      {/* SECTION CTA BANNIÈRE NOIRE NOCTURNE */}
+      <section className="relative z-10 py-32 px-6 bg-[#070709] text-white text-center overflow-hidden">
+        {/* CERCLES DÉCORATIFS */}
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full border border-white/10 animate-ping opacity-20" />
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full border border-white/5" />
 
+        <div className="max-w-3xl mx-auto relative z-10">
+          <span className="text-[10px] uppercase tracking-[0.45em] text-gray-400 font-extrabold block mb-6">
+            Haute Précision
+          </span>
 
-      {/* ================================= */}
-      {/* CTA */}
-      {/* ================================= */}
-
-      <section className="
-        relative
-        px-5
-        md:px-10
-        py-28
-        md:py-36
-        bg-black
-        text-white
-        overflow-hidden
-      ">
-
-
-        <div className="
-          pointer-events-none
-          absolute
-          top-1/2
-          left-1/2
-          -translate-x-1/2
-          -translate-y-1/2
-          h-[450px]
-          w-[450px]
-          rounded-full
-          border
-          border-white/[0.05]
-        " />
-
-
-        <div className="
-          pointer-events-none
-          absolute
-          top-1/2
-          left-1/2
-          -translate-x-1/2
-          -translate-y-1/2
-          h-[650px]
-          w-[650px]
-          rounded-full
-          border
-          border-white/[0.03]
-        " />
-
-
-        <div className="
-          relative
-          z-10
-          max-w-4xl
-          mx-auto
-          text-center
-          prestations-fade-up
-        ">
-
-
-          <div className="
-            flex
-            items-center
-            justify-center
-            gap-4
-            mb-8
-          ">
-
-            <div className="
-              h-px
-              w-10
-              bg-white/30
-            " />
-
-
-            <span className="
-              text-[9px]
-              uppercase
-              tracking-[0.45em]
-              text-gray-500
-            ">
-              VDO BARBER
-            </span>
-
-
-            <div className="
-              h-px
-              w-10
-              bg-white/30
-            " />
-
-          </div>
-
-
-
-          <h2 className="
-            font-serif
-            text-5xl
-            md:text-7xl
-            lg:text-8xl
-            leading-[.9]
-            tracking-[-0.04em]
-          ">
-
-            Votre prochain
-
-            <span className="
-              block
-              italic
-              font-normal
-              text-gray-500
-              mt-4
-            ">
-              style commence ici
-            </span>
-
+          <h2 className="font-serif text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-8">
+            Votre prochain <br />
+            <span className="italic font-light text-gray-400">style commence ici</span>
           </h2>
 
-
-
-          <p className="
-            max-w-lg
-            mx-auto
-            mt-8
-            text-sm
-            md:text-base
-            leading-7
-            text-gray-500
-          ">
-
-            Choisissez votre style et réservez
-            votre prochain rendez-vous chez VDO Barber.
-
+          <p className="text-gray-400 text-sm md:text-base font-light mb-12 max-w-lg mx-auto leading-relaxed">
+            Choisissez la coupe qui vous ressemble et réservez votre créneau en quelques clics chez VDO Barber.
           </p>
-
-
 
           <a
             href="/reservation"
-            className="
-              prestations-shimmer
-              inline-flex
-              items-center
-              justify-center
-              mt-10
-              bg-white
-              text-black
-              px-12
-              py-5
-              rounded-full
-              tracking-[0.2em]
-              uppercase
-              text-[10px]
-              font-medium
-              transition-all
-              duration-300
-              hover:-translate-y-1
-              hover:shadow-[0_20px_50px_rgba(255,255,255,.12)]
-            "
+            className="btn-badass inline-block bg-white text-black font-black text-xs uppercase tracking-[0.3em] px-12 py-5 rounded-2xl shadow-2xl hover:bg-gray-200"
           >
-
-            Réserver votre rendez-vous
-
+            Réserver mon rendez-vous
           </a>
-
         </div>
-
       </section>
 
-
-
-      {/* ================================= */}
       {/* FOOTER */}
-      {/* ================================= */}
-
-      <footer className="
-        bg-[#FAFAF8]
-        px-5
-        md:px-10
-        py-10
-      ">
-
-        <div className="
-          max-w-6xl
-          mx-auto
-        ">
-
-          <div className="
-            flex
-            flex-col
-            md:flex-row
-            items-center
-            justify-between
-            gap-6
-          ">
-
-
-            <div className="
-              flex
-              items-center
-              gap-4
-            ">
-
-              <div className="
-                h-9
-                w-9
-                rounded-full
-                bg-black
-                text-white
-                flex
-                items-center
-                justify-center
-                font-serif
-                text-sm
-              ">
-                V
-              </div>
-
-
-              <div>
-
-                <p className="
-                  font-serif
-                  text-lg
-                ">
-                  VDO Barber
-                </p>
-
-
-                <p className="
-                  text-[8px]
-                  uppercase
-                  tracking-[0.35em]
-                  text-gray-400
-                  mt-1
-                ">
-                  Experience masculine
-                </p>
-
-              </div>
-
-            </div>
-
-
-            <p className="
-              text-[9px]
-              uppercase
-              tracking-[0.35em]
-              text-gray-400
-            ">
-              Victor.
-            </p>
-
-
-          </div>
-
+      <footer className="relative z-10 border-t border-black/10 py-10 px-6 md:px-16 bg-white">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-bold uppercase tracking-widest text-gray-500">
+          <p className="hover:text-black transition-colors cursor-default">VDO Barber Studio</p>
+          <p className="hover:text-black transition-colors cursor-default">Victor.</p>
         </div>
-
       </footer>
 
-
     </div>
-
-  )
-
+  );
 }
 
-
-export default Prestations
+export default Prestations;

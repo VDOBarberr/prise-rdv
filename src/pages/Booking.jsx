@@ -2,7 +2,6 @@ import { useEffect, useState } from "react"
 import { supabase } from "../services/supabase"
 
 function Booking() {
-
   const [availability, setAvailability] = useState([])
   const [selectedDate, setSelectedDate] = useState("")
   const [selectedSlot, setSelectedSlot] = useState(null)
@@ -10,9 +9,7 @@ function Booking() {
   const [loading, setLoading] = useState(false)
 
   const [confirmed, setConfirmed] = useState(false)
-
   const [confirmationData, setConfirmationData] = useState(null)
-
   const [message, setMessage] = useState("")
 
   const [form, setForm] = useState({
@@ -26,22 +23,21 @@ function Booking() {
     {
       name: "Coupe",
       price: "15€",
-      description: "Coupe homme personnalisée"
+      description: "Coupe sur-mesure & finition haute précision"
     },
     {
-      name: "Coupe + barbe",
+      name: "Coupe + Taille Barbe ",
       price: "20€",
-      description: "Coupe complète avec taille de barbe"
+      description: "Coupe sur-mesure & taille de barbe avec finitions haute précision."
     },
     {
-      name: "Coupe Transformation",
+      name: "Transformation",
       price: "20€",
-      description: "+ de 2 mois de pousse"
+      description: "Changement de style complet (+2 mois de repousse)"
     }
   ]
 
   async function loadAvailability() {
-
     const { data, error } = await supabase
       .from("availability")
       .select("*")
@@ -50,10 +46,7 @@ function Booking() {
       .order("time", { ascending: true })
 
     if (error) {
-      console.error(
-        "Erreur chargement disponibilités :",
-        error
-      )
+      console.error("Erreur chargement disponibilités :", error)
       return
     }
 
@@ -69,9 +62,7 @@ function Booking() {
   )
 
   async function createAppointment(e) {
-
     e.preventDefault()
-
     setMessage("")
 
     if (!selectedSlot) {
@@ -79,58 +70,25 @@ function Booking() {
       return
     }
 
-    if (
-      !form.name ||
-      !form.phone ||
-      !form.email ||
-      !form.service
-    ) {
-      setMessage("Veuillez remplir tous les champs.")
+    if (!form.name || !form.phone || !form.email || !form.service) {
+      setMessage("Veuillez remplir tous les champs du formulaire.")
       return
     }
 
     setLoading(true)
 
     try {
-
-      const {
-        data: currentSlot,
-        error: checkError
-      } = await supabase
+      const { data: currentSlot, error: checkError } = await supabase
         .from("availability")
         .select("*")
         .eq("id", selectedSlot.id)
         .eq("active", true)
         .maybeSingle()
 
-      if (checkError) {
-
-        console.error(
-          "Erreur vérification créneau :",
-          checkError
-        )
-
-        setMessage(
-          "Impossible de vérifier ce créneau."
-        )
-
-        return
-      }
-
-      if (!currentSlot) {
-
-        setAvailability((prev) =>
-          prev.filter(
-            (slot) => slot.id !== selectedSlot.id
-          )
-        )
-
+      if (checkError || !currentSlot) {
+        setAvailability((prev) => prev.filter((slot) => slot.id !== selectedSlot.id))
         setSelectedSlot(null)
-
-        setMessage(
-          "Ce créneau vient d'être réservé."
-        )
-
+        setMessage("Ce créneau n'est plus disponible.")
         return
       }
 
@@ -144,35 +102,14 @@ function Booking() {
         status: "en attente"
       }
 
-      const {
-        error: appointmentError
-      } = await supabase
+      const { error: appointmentError } = await supabase
         .from("appointments")
         .insert(appointmentData)
 
       if (appointmentError) {
-
-        console.error(
-          "Erreur création rendez-vous :",
-          appointmentError
-        )
-
-        setMessage(
-          "Une erreur est survenue lors de la réservation."
-        )
-
+        setMessage("Erreur lors de l'enregistrement de la réservation.")
         return
       }
-
-      /*
-       * IMPORTANT
-       *
-       * À partir d'ici, Supabase a bien enregistré
-       * le rendez-vous.
-       *
-       * On sauvegarde les informations AVANT
-       * de vider les champs.
-       */
 
       const newConfirmation = {
         name: form.name,
@@ -184,831 +121,346 @@ function Booking() {
       }
 
       setConfirmationData(newConfirmation)
-
-      /*
-       * C'est cette ligne qui affiche
-       * l'écran de confirmation.
-       */
-
       setConfirmed(true)
 
-      /*
-       * On désactive le créneau.
-       */
-
-      const {
-        data: updatedSlot,
-        error: availabilityError
-      } = await supabase
+      await supabase
         .from("availability")
-        .update({
-          active: false
-        })
+        .update({ active: false })
         .eq("id", currentSlot.id)
-        .eq("active", true)
-        .select()
-        .maybeSingle()
 
-      if (availabilityError) {
-
-        console.error(
-          "Erreur désactivation créneau :",
-          availabilityError
-        )
-
-      }
-
-      if (!updatedSlot) {
-
-        console.warn(
-          "Le rendez-vous est enregistré mais le créneau n'a pas été désactivé."
-        )
-
-      }
-
-      setAvailability((prev) =>
-        prev.filter(
-          (slot) => slot.id !== currentSlot.id
-        )
-      )
-
-    } catch (error) {
-
-      console.error(
-        "Erreur inattendue :",
-        error
-      )
-
-      setMessage(
-        "Une erreur inattendue est survenue."
-      )
-
+      setAvailability((prev) => prev.filter((slot) => slot.id !== currentSlot.id))
+    } catch (err) {
+      setMessage("Une erreur inattendue est survenue.")
     } finally {
-
       setLoading(false)
-
     }
   }
 
-  /*
-   * ÉCRAN DE CONFIRMATION
-   */
-
-  if (confirmed && confirmationData) {
-
-    return (
-      <div className="max-w-5xl mx-auto px-5 md:px-10 py-20">
-
-        <div className="text-center mb-16">
-
-          <p className="text-[10px] uppercase tracking-[0.4em] text-gray-400 mb-5">
-            VDO BARBER
-          </p>
-
-          <h1 className="font-serif text-5xl md:text-7xl leading-none">
-
-            Rendez-vous
-
-            <span className="block italic font-normal">
-              confirmé
-            </span>
-
-          </h1>
-
-          <p className="max-w-xl mx-auto mt-7 text-sm md:text-base leading-7 text-gray-500">
-            Merci pour votre réservation.
-            <br />
-            Votre rendez-vous a bien été enregistré.
-          </p>
-
-        </div>
-
-        <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-[0_20px_70px_rgba(0,0,0,.06)] p-7 md:p-10">
-
-          <div className="bg-black text-white rounded-[2rem] p-8 md:p-10">
-
-            <div className="flex justify-center mb-8">
-
-              <div className="h-20 w-20 rounded-full bg-white text-black flex items-center justify-center text-3xl">
-                ✓
-              </div>
-
-            </div>
-
-            <div className="text-center mb-10">
-
-              <p className="text-[9px] uppercase tracking-[0.35em] text-gray-500 mb-3">
-                Réservation confirmée
-              </p>
-
-              <h2 className="font-serif text-3xl md:text-4xl">
-                Votre rendez-vous est confirmé
-              </h2>
-
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-5">
-
-              <div className="bg-white/5 rounded-2xl p-5">
-
-                <p className="text-[9px] uppercase tracking-[0.25em] text-gray-500 mb-2">
-                  Nom
-                </p>
-
-                <p className="font-serif text-xl">
-                  {confirmationData.name}
-                </p>
-
-              </div>
-
-              <div className="bg-white/5 rounded-2xl p-5">
-
-                <p className="text-[9px] uppercase tracking-[0.25em] text-gray-500 mb-2">
-                  Prestation
-                </p>
-
-                <p className="font-serif text-xl">
-                  {confirmationData.service}
-                </p>
-
-              </div>
-
-              <div className="bg-white/5 rounded-2xl p-5">
-
-                <p className="text-[9px] uppercase tracking-[0.25em] text-gray-500 mb-2">
-                  Date
-                </p>
-
-                <p className="font-serif text-xl">
-                  {confirmationData.date}
-                </p>
-
-              </div>
-
-              <div className="bg-white/5 rounded-2xl p-5">
-
-                <p className="text-[9px] uppercase tracking-[0.25em] text-gray-500 mb-2">
-                  Heure
-                </p>
-
-                <p className="font-serif text-xl">
-                  {confirmationData.time}
-                </p>
-
-              </div>
-
-            </div>
-
-            <div className="text-center mt-10 pt-8 border-t border-white/10">
-
-              <p className="text-sm text-gray-400">
-                Merci {confirmationData.name}
-              </p>
-
-              <p className="font-serif text-xl mt-2">
-                À bientôt au VDO BARBER
-              </p>
-
-            </div>
-
-          </div>
-
-        </section>
-
-      </div>
-    )
-  }
-
-  /*
-   * PAGE DE RÉSERVATION
-   */
-
   return (
-
-    <div className="max-w-5xl mx-auto px-5 md:px-10 py-20">
-
-      <div className="text-center mb-16">
-
-        <p className="text-[10px] uppercase tracking-[0.4em] text-gray-400 mb-5">
-          VDO BARBER
-        </p>
-
-        <h1 className="font-serif text-5xl md:text-7xl leading-none">
-
-          Prendre
-
-          <span className="block italic font-normal">
-            rendez-vous
-          </span>
-
-        </h1>
-
-        <p className="max-w-xl mx-auto mt-7 text-sm md:text-base leading-7 text-gray-500">
-          Choisissez votre date, votre horaire et votre prestation.
-          <br />
-          Votre expérience commence ici.
-        </p>
-
-      </div>
-
-      <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-[0_20px_70px_rgba(0,0,0,.05)] p-7 md:p-10 mb-7">
-
-        <div className="flex items-start gap-5 mb-8">
-
-          <div className="flex-shrink-0 h-12 w-12 rounded-full bg-black text-white flex items-center justify-center text-xs">
-            01
-          </div>
-
-          <div>
-
-            <p className="text-[9px] uppercase tracking-[0.35em] text-gray-400 mb-2">
-              Première étape
-            </p>
-
-            <h2 className="font-serif text-3xl md:text-4xl">
-              Choisir une date
-            </h2>
-
-            <p className="text-sm text-gray-400 mt-2">
-              Disponibilités en temps réel
-            </p>
-
-          </div>
-
-        </div>
-
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => {
-
-            setSelectedDate(e.target.value)
-            setSelectedSlot(null)
-            setMessage("")
-
-          }}
-          className="w-full bg-[#FAFAF8] border border-gray-200 p-5 md:p-6 rounded-2xl text-black text-base outline-none transition-all duration-500 hover:border-gray-400 focus:border-black focus:bg-white"
-        />
-
-      </section>
-
-      {selectedDate && (
-
-        <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-[0_20px_70px_rgba(0,0,0,.05)] p-7 md:p-10 mb-7 dropdown-animation">
-
-          <div className="flex items-start gap-5 mb-8">
-
-            <div className="flex-shrink-0 h-12 w-12 rounded-full bg-black text-white flex items-center justify-center text-xs">
-              02
-            </div>
-
-            <div>
-
-              <p className="text-[9px] uppercase tracking-[0.35em] text-gray-400 mb-2">
-                Deuxième étape
-              </p>
-
-              <h2 className="font-serif text-3xl md:text-4xl">
-                Choisir votre horaire
-              </h2>
-
-              <p className="text-sm text-gray-400 mt-2">
-                Disponibilités pour le {selectedDate}
-              </p>
-
-            </div>
-
-          </div>
-
-          {availableSlots.length > 0 ? (
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-
-              {availableSlots.map((slot, index) => (
-
-                <button
-                  key={slot.id}
-                  type="button"
-                  onClick={() => {
-
-                    setSelectedSlot(slot)
-                    setMessage("")
-
-                  }}
-                  style={{
-                    animationDelay: `${index * 70}ms`
-                  }}
-                  className={`booking-slot relative p-5 md:p-6 rounded-2xl border font-medium text-sm md:text-base overflow-hidden transition-all duration-500 ease-[cubic-bezier(.22,1,.36,1)] animate-service ${
-                    selectedSlot?.id === slot.id
-                      ? "bg-black text-white border-black scale-[1.03] shadow-[0_15px_45px_rgba(0,0,0,.20)]"
-                      : "bg-[#FAFAF8] text-black border-gray-200 hover:border-black hover:bg-white hover:-translate-y-1 hover:shadow-[0_15px_40px_rgba(0,0,0,.10)]"
-                  }`}
-                >
-
-                  {slot.time}
-
-                  {selectedSlot?.id === slot.id && (
-
-                    <span className="block text-[8px] uppercase tracking-[0.25em] text-white/60 mt-2">
-                      Sélectionné
-                    </span>
-
-                  )}
-
-                </button>
-
-              ))}
-
-            </div>
-
-          ) : (
-
-            <div className="py-8 text-center">
-
-              <p className="text-gray-400">
-                Aucun créneau disponible pour cette date.
-              </p>
-
-            </div>
-
-          )}
-
-        </section>
-
-      )}
-
-      {selectedSlot && (
-
-        <section className="relative z-30 bg-white rounded-[2.5rem] border border-gray-100 shadow-[0_20px_70px_rgba(0,0,0,.06)] p-7 md:p-10 dropdown-animation">
-
-          <div className="flex items-start gap-5 mb-8">
-
-            <div className="flex-shrink-0 h-12 w-12 rounded-full bg-black text-white flex items-center justify-center text-xs">
-              03
-            </div>
-
-            <div>
-
-              <p className="text-[9px] uppercase tracking-[0.35em] text-gray-400 mb-2">
-                Dernière étape
-              </p>
-
-              <h2 className="font-serif text-3xl md:text-4xl">
-                Votre réservation
-              </h2>
-
-            </div>
-
-          </div>
-
-          <div className="bg-black text-white rounded-3xl p-6 md:p-7 mb-8">
-
-            <p className="text-[9px] uppercase tracking-[0.35em] text-gray-500 mb-5">
-              Votre créneau
-            </p>
-
-            <div className="grid md:grid-cols-3 gap-5">
-
-              <div>
-
-                <p className="text-[9px] uppercase tracking-[0.25em] text-gray-500 mb-2">
-                  Date
-                </p>
-
-                <p className="font-serif text-xl">
-                  {selectedSlot.date}
-                </p>
-
-              </div>
-
-              <div>
-
-                <p className="text-[9px] uppercase tracking-[0.25em] text-gray-500 mb-2">
-                  Heure
-                </p>
-
-                <p className="font-serif text-xl">
-                  {selectedSlot.time}
-                </p>
-
-              </div>
-
-              <div>
-
-                <p className="text-[9px] uppercase tracking-[0.25em] text-gray-500 mb-2">
-                  Prestation
-                </p>
-
-                <p className="font-serif text-xl">
-                  {form.service || "À sélectionner"}
-                </p>
-
-              </div>
-
-            </div>
-
-          </div>
-
-          <form
-            onSubmit={createAppointment}
-            className="space-y-5"
-          >
-
-            <div>
-
-              <label className="block text-[9px] uppercase tracking-[0.3em] text-gray-400 mb-3">
-                Nom
-              </label>
-
-              <input
-                type="text"
-                className="booking-input w-full bg-[#FAFAF8] border border-gray-200 p-4 rounded-xl text-black outline-none transition-all duration-500 hover:border-gray-400 focus:border-black"
-                placeholder="Votre nom"
-                value={form.name}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    name: e.target.value
-                  })
-                }
-              />
-
-            </div>
-
-            <div>
-
-              <label className="block text-[9px] uppercase tracking-[0.3em] text-gray-400 mb-3">
-                Téléphone
-              </label>
-
-              <input
-                type="tel"
-                className="booking-input w-full bg-[#FAFAF8] border border-gray-200 p-4 rounded-xl text-black outline-none transition-all duration-500 hover:border-gray-400 focus:border-black"
-                placeholder="Votre téléphone"
-                value={form.phone}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    phone: e.target.value
-                  })
-                }
-              />
-
-            </div>
-
-            <div>
-
-              <label className="block text-[9px] uppercase tracking-[0.3em] text-gray-400 mb-3">
-                Email
-              </label>
-
-              <input
-                type="email"
-                className="booking-input w-full bg-[#FAFAF8] border border-gray-200 p-4 rounded-xl text-black outline-none transition-all duration-500 hover:border-gray-400 focus:border-black"
-                placeholder="votre@email.com"
-                value={form.email}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    email: e.target.value
-                  })
-                }
-              />
-
-            </div>
-
-            <div className="relative z-[100]">
-
-              <label className="block text-[9px] uppercase tracking-[0.3em] text-gray-400 mb-3">
-                Prestation
-              </label>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setShowServices(!showServices)
-                }
-                className={`relative z-20 w-full bg-[#FAFAF8] border p-5 rounded-xl text-left transition-all duration-500 ${
-                  showServices
-                    ? "border-black shadow-[0_10px_35px_rgba(0,0,0,.08)] bg-white"
-                    : "border-gray-200 hover:border-black hover:bg-white"
-                }`}
-              >
-
-                <div className="flex items-center justify-between">
-
-                  <div>
-
-                    <span
-                      className={
-                        form.service
-                          ? "text-black"
-                          : "text-gray-400"
-                      }
-                    >
-                      {form.service ||
-                        "Choisir une prestation"}
-                    </span>
-
-                    {form.service && (
-
-                      <span className="block text-[8px] uppercase tracking-[0.2em] text-gray-400 mt-1">
-                        Prestation sélectionnée
-                      </span>
-
-                    )}
-
-                  </div>
-
-                  <span
-                    className={`text-lg transition-transform duration-500 ${
-                      showServices
-                        ? "rotate-180"
-                        : "rotate-0"
-                    }`}
-                  >
-                    ⌄
-                  </span>
-
-                </div>
-
-              </button>
-
-              {showServices && (
-
-                <div className="relative w-full mt-3 bg-black text-white rounded-[2rem] shadow-[0_30px_100px_rgba(0,0,0,.30)] border border-gray-800 overflow-visible dropdown-premium">
-
-                  <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-20" />
-
-                  {services.map((service, index) => (
-
-                    <button
-                      key={service.name}
-                      type="button"
-                      style={{
-                        animationDelay: `${index * 100}ms`
-                      }}
-                      onClick={() => {
-
-                        setForm({
-                          ...form,
-                          service: `${service.name} - ${service.price}`
-                        })
-
-                        setShowServices(false)
-
-                      }}
-                      className="booking-service group relative block w-full p-5 md:p-6 text-left border-b border-white/10 last:border-none transition-all duration-500 hover:bg-white hover:text-black hover:px-7 animate-service"
-                    >
-
-                      <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-white scale-y-0 origin-center transition-transform duration-500 group-hover:scale-y-100 group-hover:bg-black" />
-
-                      <div className="flex justify-between items-center gap-5">
-
-                        <div className="flex items-center gap-4 min-w-0">
-
-                          <span className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-white/10 text-[9px] text-gray-400 transition-all duration-500 group-hover:bg-black group-hover:text-white group-hover:scale-110">
-                            {String(index + 1).padStart(2, "0")}
-                          </span>
-
-                          <p className="font-serif text-lg md:text-xl transition-all duration-500 group-hover:translate-x-1">
-                            {service.name}
-                          </p>
-
-                        </div>
-
-                        <p className="flex-shrink-0 font-bold text-sm md:text-base">
-                          {service.price}
-                        </p>
-
-                      </div>
-
-                      <p className="text-sm text-gray-400 mt-3 ml-13 transition-colors duration-500 group-hover:text-gray-600">
-                        {service.description}
-                      </p>
-
-                      <div className="mt-4 h-px w-0 bg-current transition-all duration-700 group-hover:w-full opacity-20" />
-
-                    </button>
-
-                  ))}
-
-                </div>
-
-              )}
-
-            </div>
-
-            {message && (
-
-              <div className="rounded-2xl p-4 text-sm text-center bg-[#FAFAF8] border border-gray-200 text-gray-600">
-
-                {message}
-
-              </div>
-
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-black text-white py-5 rounded-full uppercase tracking-[0.28em] text-[10px] md:text-xs font-medium transition-all duration-500 hover:bg-gray-800 hover:scale-[1.015] hover:shadow-[0_20px_45px_rgba(0,0,0,.18)] active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-
-              {loading
-                ? "Réservation en cours..."
-                : "Confirmer le rendez-vous"}
-
-            </button>
-
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => {
-
-                setSelectedSlot(null)
-                setMessage("")
-                setShowServices(false)
-
-              }}
-              className="w-full border border-gray-200 text-gray-500 py-4 rounded-full text-[10px] uppercase tracking-[0.25em] transition-all duration-500 hover:border-black hover:text-black hover:bg-[#FAFAF8]"
-            >
-
-              Changer d'horaire
-
-            </button>
-
-          </form>
-
-        </section>
-
-      )}
-
+    <div className="min-h-screen bg-[#FFFFFF] text-[#0A0A0A] font-sans pb-28 pt-10 px-4 sm:px-6 relative overflow-hidden selection:bg-black selection:text-white">
+      
+      {/* ANIMATIONS ET STYLES LUMINEUX */}
       <style>{`
-
-        @keyframes dropdownReveal {
-
-          0% {
-            opacity: 0;
-            transform: translateY(-15px) scale(.97);
-            filter: blur(6px);
-          }
-
-          50% {
-            opacity: .8;
-            filter: blur(2px);
-          }
-
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-            filter: blur(0);
-          }
-
+        @keyframes floatSlow {
+          0%, 100% { transform: translate(0px, 0px) scale(1); }
+          50% { transform: translate(40px, -30px) scale(1.1); }
         }
 
-        @keyframes serviceReveal {
-
-          0% {
-            opacity: 0;
-            transform: translateX(-25px);
-          }
-
-          60% {
-            opacity: 1;
-          }
-
-          100% {
-            opacity: 1;
-            transform: translateX(0);
-          }
-
+        @keyframes lightSweep {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(200%); }
         }
 
-        @keyframes dropdownGlow {
-
-          0% {
-            box-shadow:
-              0 0 0 rgba(0,0,0,0);
-          }
-
-          100% {
-            box-shadow:
-              0 30px 100px rgba(0,0,0,.30);
-          }
-
+        @keyframes popUp {
+          0% { opacity: 0; transform: translateY(24px) scale(0.97); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        .dropdown-animation {
+        .animate-pop { animation: popUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .bg-orb-1 { animation: floatSlow 16s ease-in-out infinite; }
+        .bg-orb-2 { animation: floatSlow 22s ease-in-out infinite reverse; }
 
-          animation:
-            dropdownReveal
-            .55s
-            cubic-bezier(.22,1,.36,1)
-            both;
-
+        .glass-panel-light {
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(10, 10, 10, 0.08);
+          box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.05);
+          transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .dropdown-premium {
-
-          animation:
-            dropdownReveal
-            .55s
-            cubic-bezier(.22,1,.36,1)
-            both,
-            dropdownGlow
-            .7s
-            ease
-            both;
-
+        .glass-panel-light:hover {
+          border-color: rgba(10, 10, 10, 0.2);
+          box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.1);
         }
 
-        .animate-service {
-
-          animation:
-            serviceReveal
-            .65s
-            cubic-bezier(.22,1,.36,1)
-            both;
-
+        .btn-black-glow {
+          position: relative;
+          overflow: hidden;
+          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
-        .booking-service:hover {
-
-          box-shadow:
-            inset 4px 0 0 currentColor;
-
-        }
-
-        .booking-slot::after {
-
-          content: "";
-
+        .btn-black-glow::after {
+          content: '';
           position: absolute;
-
-          inset: 0;
-
-          pointer-events: none;
-
-          opacity: 0;
-
-          background:
-            linear-gradient(
-              110deg,
-              transparent 25%,
-              rgba(255,255,255,.35) 50%,
-              transparent 75%
-            );
-
-          transform:
-            translateX(-100%);
-
+          top: 0; left: 0; width: 50%; height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+          transform: translateX(-100%);
         }
 
-        .booking-slot:hover::after {
-
-          opacity: 1;
-
-          animation:
-            slotShimmer
-            1s
-            ease;
-
+        .btn-black-glow:hover::after {
+          animation: lightSweep 0.8s ease-in-out infinite;
         }
 
-        @keyframes slotShimmer {
-
-          0% {
-            transform:
-              translateX(-100%);
-          }
-
-          100% {
-            transform:
-              translateX(100%);
-          }
-
+        .btn-black-glow:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 15px 30px -5px rgba(10, 10, 10, 0.3);
         }
 
-        @media (max-width: 640px) {
-
-          .booking-service {
-
-            padding-top: 18px;
-            padding-bottom: 18px;
-
-          }
-
-          .booking-service p {
-
-            word-break: normal;
-
-          }
-
+        .btn-black-glow:active {
+          transform: translateY(1px) scale(0.98);
         }
-
       `}</style>
 
+      {/* ARRIÈRE-PLAN LUMINEUX */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="bg-orb-1 absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-black/[0.03] rounded-full blur-[140px]" />
+        <div className="bg-orb-2 absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-black/[0.02] rounded-full blur-[120px]" />
+        <div 
+          className="absolute inset-0 opacity-[0.04]" 
+          style={{ backgroundImage: 'radial-gradient(#0A0A0A 1px, transparent 1px)', backgroundSize: '32px 32px' }} 
+        />
+      </div>
+
+      <div className="relative z-10 max-w-3xl mx-auto">
+        
+        {/* HEADER BRANDING */}
+        <header className="text-center mb-12 sm:mb-16 animate-pop">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-black/10 bg-black/5 text-black text-[10px] tracking-[0.3em] uppercase font-black mb-5">
+            <span className="w-2 h-2 rounded-full bg-black animate-ping" />
+            VDO Barber Experience
+          </div>
+
+          <h1 className="font-serif text-5xl sm:text-7xl font-black uppercase tracking-tight text-[#0A0A0A] mb-3">
+            RÉSERVATION <span className="italic font-light text-gray-400">CLUB</span>
+          </h1>
+
+          <p className="text-gray-500 text-xs sm:text-sm uppercase tracking-[0.25em] font-medium">
+            Prenez rendez-vous en quelques secondes
+          </p>
+        </header>
+
+        {/* ECRAN DE CONFIRMATION */}
+        {confirmed && confirmationData ? (
+          <div className="glass-panel-light rounded-[2.5rem] p-8 sm:p-12 text-center border border-black/10 animate-pop relative overflow-hidden">
+            <div className="w-20 h-20 rounded-full bg-[#0A0A0A] text-white flex items-center justify-center mx-auto mb-6 text-3xl font-black shadow-xl">
+              ✓
+            </div>
+
+            <span className="text-[10px] uppercase tracking-[0.35em] text-gray-500 font-black">
+              Confirmation Instantanée
+            </span>
+
+            <h2 className="font-serif text-3xl sm:text-5xl font-black text-[#0A0A0A] mt-1 mb-8">
+              Rendez-vous Validé !
+            </h2>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left mb-8">
+              <div className="bg-gray-50 border border-black/5 rounded-2xl p-4">
+                <span className="text-[9px] uppercase tracking-widest text-gray-400 font-bold block mb-1">Nom</span>
+                <span className="text-lg font-bold text-[#0A0A0A]">{confirmationData.name}</span>
+              </div>
+
+              <div className="bg-gray-50 border border-black/5 rounded-2xl p-4">
+                <span className="text-[9px] uppercase tracking-widest text-gray-400 font-bold block mb-1">Prestation</span>
+                <span className="text-lg font-bold text-[#0A0A0A]">{confirmationData.service}</span>
+              </div>
+
+              <div className="bg-gray-50 border border-black/5 rounded-2xl p-4">
+                <span className="text-[9px] uppercase tracking-widest text-gray-400 font-bold block mb-1">Date</span>
+                <span className="text-lg font-bold text-[#0A0A0A]">{confirmationData.date}</span>
+              </div>
+
+              <div className="bg-gray-50 border border-black/5 rounded-2xl p-4">
+                <span className="text-[9px] uppercase tracking-widest text-gray-400 font-bold block mb-1">Horaire</span>
+                <span className="text-lg font-bold text-[#0A0A0A]">{confirmationData.time}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">
+              Un e-mail de confirmation vous a été envoyé. À très vite !
+            </p>
+          </div>
+        ) : (
+
+          /* PARCOURS EN ÉTAPES INTERACTIVES */
+          <div className="space-y-8">
+
+            {/* ÉTAPE 1 : CHOIX DE LA DATE */}
+            <section className="glass-panel-light rounded-[2.5rem] p-7 sm:p-9 animate-pop">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-9 h-9 rounded-2xl bg-black text-white font-black text-sm flex items-center justify-center shrink-0 shadow-md">
+                  01
+                </div>
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-[#0A0A0A]">Sélectionnez une date</h2>
+                  <p className="text-xs text-gray-500">Consultez les disponibilités en temps réel</p>
+                </div>
+              </div>
+
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => {
+                  setSelectedDate(e.target.value)
+                  setSelectedSlot(null)
+                  setMessage("")
+                }}
+                className="w-full bg-gray-50 border border-black/10 rounded-2xl p-4 text-[#0A0A0A] font-semibold text-base outline-none focus:border-black focus:bg-white transition-all cursor-pointer shadow-sm"
+              />
+            </section>
+
+            {/* ÉTAPE 2 : CHOIX DE L'HORAIRE */}
+            {selectedDate && (
+              <section className="glass-panel-light rounded-[2.5rem] p-7 sm:p-9 animate-pop">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-9 h-9 rounded-2xl bg-black text-white font-black text-sm flex items-center justify-center shrink-0 shadow-md">
+                    02
+                  </div>
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-[#0A0A0A]">Choisissez votre créneau</h2>
+                    <p className="text-xs text-gray-500">Heures disponibles le {selectedDate}</p>
+                  </div>
+                </div>
+
+                {availableSlots.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {availableSlots.map((slot) => {
+                      const isSelected = selectedSlot?.id === slot.id
+                      return (
+                        <button
+                          key={slot.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedSlot(slot)
+                            setMessage("")
+                          }}
+                          className={`p-4 rounded-2xl font-bold text-base transition-all duration-300 border relative overflow-hidden ${
+                            isSelected
+                              ? "bg-[#0A0A0A] text-white border-black shadow-xl scale-105"
+                              : "bg-gray-50 text-[#0A0A0A] border-black/10 hover:border-black/30 hover:bg-white"
+                          }`}
+                        >
+                          {slot.time}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-center text-gray-500 py-6 text-sm font-medium">
+                    Aucun créneau disponible pour cette date.
+                  </p>
+                )}
+              </section>
+            )}
+
+            {/* ÉTAPE 3 : FORMULAIRE & PRESTATION */}
+            {selectedSlot && (
+              <section className="glass-panel-light rounded-[2.5rem] p-7 sm:p-9 animate-pop">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-9 h-9 rounded-2xl bg-black text-white font-black text-sm flex items-center justify-center shrink-0 shadow-md">
+                    03
+                  </div>
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-[#0A0A0A]">Finalisez votre réservation</h2>
+                    <p className="text-xs text-gray-500">Informations & choix du service</p>
+                  </div>
+                </div>
+
+                <form onSubmit={createAppointment} className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-extrabold mb-2">
+                      Nom complet
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Jean Dupont"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      className="w-full bg-gray-50 border border-black/10 rounded-2xl p-4 text-[#0A0A0A] placeholder-gray-400 outline-none focus:border-black focus:bg-white transition-all shadow-sm"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-extrabold mb-2">
+                        Téléphone
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="06 12 34 56 78"
+                        value={form.phone}
+                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                        className="w-full bg-gray-50 border border-black/10 rounded-2xl p-4 text-[#0A0A0A] placeholder-gray-400 outline-none focus:border-black focus:bg-white transition-all shadow-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-extrabold mb-2">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="jean@example.com"
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        className="w-full bg-gray-50 border border-black/10 rounded-2xl p-4 text-[#0A0A0A] placeholder-gray-400 outline-none focus:border-black focus:bg-white transition-all shadow-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* SÉLECTEUR MENU PRESTATION */}
+                  <div className="relative pt-2">
+                    <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-extrabold mb-2">
+                      Service souhaité
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowServices(!showServices)}
+                      className="w-full bg-gray-50 border border-black/10 p-4 rounded-2xl text-left flex justify-between items-center text-[#0A0A0A] font-bold text-sm hover:border-black transition-all shadow-sm"
+                    >
+                      <span>{form.service || "Sélectionnez une prestation"}</span>
+                      <span className={`transition-transform duration-300 ${showServices ? "rotate-180" : ""}`}>▼</span>
+                    </button>
+
+                    {showServices && (
+                      <div className="mt-3 bg-[#0A0A0A] text-white rounded-2xl overflow-hidden shadow-2xl animate-pop border border-black">
+                        {services.map((s) => (
+                          <button
+                            key={s.name}
+                            type="button"
+                            onClick={() => {
+                              setForm({ ...form, service: `${s.name} (${s.price})` })
+                              setShowServices(false)
+                            }}
+                            className="w-full p-4 text-left border-b border-white/10 last:border-none hover:bg-white hover:text-black transition-all flex justify-between items-center group cursor-pointer"
+                          >
+                            <div>
+                              <p className="font-bold text-sm">{s.name}</p>
+                              <p className="text-xs text-gray-400 group-hover:text-gray-600">{s.description}</p>
+                            </div>
+                            <span className="font-black text-base">{s.price}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {message && (
+                    <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-bold text-center">
+                      {message}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn-black-glow w-full bg-[#0A0A0A] text-white font-black py-5 rounded-2xl uppercase tracking-[0.25em] text-xs mt-4 disabled:opacity-50 shadow-xl"
+                  >
+                    {loading ? "Validation..." : "Confirmer le rendez-vous"}
+                  </button>
+                </form>
+              </section>
+            )}
+
+          </div>
+        )}
+
+      </div>
     </div>
   )
 }

@@ -1,1399 +1,363 @@
+import React, { useState, useEffect } from "react";
+
 function Home() {
+  // Gestion de l'apparition/disparition au scroll
+  const [showBottomBar, setShowBottomBar] = useState(false);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      // Si on défile vers le bas et qu'on a dépassé 100px de scroll
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setShowBottomBar(true);
+      } 
+      // Si on remonte
+      else if (currentScrollY < lastScrollY) {
+        setShowBottomBar(false);
+      }
+
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8] text-black overflow-hidden">
+    <div className="min-h-screen bg-[#F8F9FA] text-[#070709] overflow-hidden relative selection:bg-black selection:text-white font-sans">
 
+      {/* DÉFINITION DES CSS ET ANIMATIONS SUR-MESURE */}
       <style>{`
-
-        @keyframes homeFadeUp {
-          0% {
-            opacity: 0;
-            transform: translateY(35px);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        @keyframes subtleRotate {
+          0% { transform: rotate(0deg) scale(1); }
+          50% { transform: rotate(180deg) scale(1.15); }
+          100% { transform: rotate(360deg) scale(1); }
         }
 
-        @keyframes homeFade {
-          0% {
-            opacity: 0;
-          }
-          100% {
-            opacity: 1;
-          }
+        @keyframes marqueeSlow {
+          0% { transform: translateX(0%); }
+          100% { transform: translateX(-50%); }
         }
 
-        @keyframes homeScale {
-          0% {
-            opacity: 0;
-            transform: scale(.96);
-          }
-          100% {
-            opacity: 1;
-            transform: scale(1);
-          }
+        @keyframes lightSweep {
+          0% { transform: translateX(-150%) skewX(-25deg); }
+          100% { transform: translateX(250%) skewX(-25deg); }
         }
 
-        @keyframes homeShimmer {
-          0% {
-            transform: translateX(-120%);
-          }
-          100% {
-            transform: translateX(120%);
-          }
+        .anim-rotate { animation: subtleRotate 25s linear infinite; }
+        .anim-marquee { animation: marqueeSlow 18s linear infinite; }
+
+        /* Effet Carte de Luxe avec Bordure Interactive (Thème Clair) */
+        .card-luxury {
+          background: rgba(0, 0, 0, 0.02);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        @keyframes homeFloat {
-          0%, 100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-10px);
-          }
+        .card-luxury:hover {
+          background: rgba(0, 0, 0, 0.04);
+          border-color: rgba(0, 0, 0, 0.25);
+          transform: translateY(-8px);
+          box-shadow: 0 30px 60px rgba(0, 0, 0, 0.08), 0 0 40px rgba(0, 0, 0, 0.03);
         }
 
-        .home-fade-up {
-          animation: homeFadeUp .9s cubic-bezier(.22,1,.36,1) both;
+        .price-badge {
+          background: #070709;
+          color: #FFFFFF;
+          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .home-fade {
-          animation: homeFade .8s ease both;
+        .card-luxury:hover .price-badge {
+          transform: scale(1.12) rotate(-4deg);
+          box-shadow: 0 12px 25px rgba(0, 0, 0, 0.25);
         }
 
-        .home-scale {
-          animation: homeScale .9s cubic-bezier(.22,1,.36,1) both;
-        }
-
-        .home-shimmer {
+        /* ANIMATION BOUTONS QUI DÉCHIRE (EXPLOSIVE & ÉLÉGANTE) */
+        .btn-badass {
           position: relative;
           overflow: hidden;
+          transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+          user-select: none;
         }
 
-        .home-shimmer::after {
-          content: "";
+        /* Balayage néon de lumière au survol */
+        .btn-badass::before {
+          content: '';
           position: absolute;
-          top: 0;
-          left: 0;
-          width: 40%;
-          height: 100%;
+          top: -50%;
+          left: -50%;
+          width: 50%;
+          height: 200%;
           background: linear-gradient(
             90deg,
             transparent,
-            rgba(255,255,255,.35),
+            rgba(255, 255, 255, 0.45),
             transparent
           );
-          transform: translateX(-120%);
-          pointer-events: none;
+          transform: translateX(-150%) skewX(-25deg);
         }
 
-        .home-shimmer:hover::after {
-          animation: homeShimmer .9s ease;
+        .btn-badass:hover::before {
+          animation: lightSweep 0.85s ease-in-out infinite;
         }
 
-        .home-float {
-          animation: homeFloat 5s ease-in-out infinite;
+        .btn-badass:hover {
+          transform: translateY(-4px) scale(1.04);
+          box-shadow: 0 20px 40px -10px rgba(7, 7, 9, 0.35);
         }
 
-        .home-service-card {
-          transition:
-            transform .6s cubic-bezier(.22,1,.36,1),
-            box-shadow .6s cubic-bezier(.22,1,.36,1),
-            border-color .4s ease;
+        .btn-badass:active {
+          transform: translateY(2px) scale(0.93) !important;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
+          transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
 
-        .home-service-card:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 30px 70px rgba(0,0,0,.10);
-          border-color: #d4d4d0;
+        /* Variante Bouton Secondaire (Outline/Card) */
+        .btn-badass-secondary {
+          position: relative;
+          overflow: hidden;
+          transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+          user-select: none;
         }
 
-        .home-service-number {
-          transition:
-            background-color .5s ease,
-            color .5s ease,
-            transform .5s cubic-bezier(.22,1,.36,1);
+        .btn-badass-secondary:hover {
+          transform: translateY(-4px) scale(1.04);
+          background: rgba(7, 7, 9, 0.05);
+          border-color: rgba(7, 7, 9, 0.4);
+          box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.12);
         }
 
-        .home-service-card:hover .home-service-number {
-          background: #000;
-          color: #fff;
-          transform: scale(1.08);
+        .btn-badass-secondary:active {
+          transform: translateY(2px) scale(0.93) !important;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1) !important;
+          transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
-
-        .home-word {
-          transition:
-            letter-spacing .7s cubic-bezier(.22,1,.36,1),
-            transform .7s cubic-bezier(.22,1,.36,1);
-        }
-
-        .home-word:hover {
-          letter-spacing: .08em;
-          transform: translateX(5px);
-        }
-
-        .home-button {
-          transition:
-            transform .4s cubic-bezier(.22,1,.36,1),
-            box-shadow .4s ease,
-            background-color .3s ease;
-        }
-
-        .home-button:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 18px 40px rgba(0,0,0,.16);
-        }
-
       `}</style>
 
+      {/* ARRIÈRE-PLAN ANIMÉ & DYNAMIQUE */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-black/[0.03] rounded-full blur-[150px] anim-rotate" />
+        
+        {/* Pattern de fond type maillage minimaliste */}
+        <div 
+          className="absolute inset-0 opacity-[0.05]" 
+          style={{ backgroundImage: 'radial-gradient(#000000 1px, transparent 1px)', backgroundSize: '32px 32px' }} 
+        />
+      </div>
 
-      {/* HERO */}
+      {/* BANDEAU FLOTTANT EN BAS */}
+      <div 
+        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-lg transition-all duration-500 ease-in-out ${
+          showBottomBar 
+            ? 'opacity-100 translate-y-0 pointer-events-auto' 
+            : 'opacity-0 translate-y-12 pointer-events-none'
+        }`}
+      >
+        <div className="card-luxury rounded-full px-6 py-3.5 flex items-center justify-between border border-black/15 shadow-2xl bg-white/80 backdrop-blur-xl">
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-black animate-ping" />
+            <span className="font-serif font-black tracking-widest text-xs uppercase">VDO Barber</span>
+          </div>
+          <a
+            href="/reservation"
+            className="btn-badass bg-[#070709] text-white text-[10px] font-black uppercase tracking-[0.2em] px-6 py-3 rounded-full shadow-xl"
+          >
+            Réserver
+          </a>
+        </div>
+      </div>
 
-      <section className="
-        relative
-        min-h-screen
-        flex
-        items-center
-        px-5
-        md:px-10
-        py-20
-        overflow-hidden
-      ">
+      {/* HERO SECTION */}
+      <section className="relative z-10 min-h-screen flex flex-col justify-center items-center text-center px-6 pt-20 pb-16">
+        
+        <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-black/10 bg-black/5 backdrop-blur-md text-[10px] tracking-[0.35em] uppercase text-gray-600 font-extrabold mb-8 transition-transform duration-300 hover:scale-105 cursor-default">
+          Haute Coiffure Masculine
+        </div>
 
-        <div className="
-          pointer-events-none
-          absolute
-          top-[-220px]
-          left-1/2
-          h-[650px]
-          w-[650px]
-          -translate-x-1/2
-          rounded-full
-          bg-black/[0.025]
-          blur-[130px]
-        " />
+        <h1 className="font-serif text-7xl sm:text-9xl md:text-[12rem] font-black uppercase tracking-tighter leading-none text-[#070709]">
+          VDO <span className="text-transparent bg-clip-text bg-gradient-to-b from-black via-gray-700 to-gray-400 italic font-light block sm:inline">Barber</span>
+        </h1>
 
-        <div className="
-          pointer-events-none
-          absolute
-          bottom-[-180px]
-          right-[-150px]
-          h-[500px]
-          w-[500px]
-          rounded-full
-          bg-black/[0.02]
-          blur-[120px]
-        " />
+        <p className="max-w-xl text-gray-600 text-sm md:text-base font-light tracking-wide mt-8 leading-relaxed">
+          Un espace dédié à l'élégance masculine, où chaque détail est pensé pour offrir une expérience unique.
+        </p>
 
+        <div className="flex flex-col sm:flex-row items-center gap-5 mt-12 w-full max-w-md">
+          <a
+            href="/reservation"
+            className="btn-badass w-full sm:w-1/2 bg-[#070709] text-white font-black text-xs uppercase tracking-[0.2em] py-5 rounded-2xl shadow-2xl text-center"
+          >
+            Réserver
+          </a>
+          <a
+            href="#tarifs"
+            className="btn-badass-secondary w-full sm:w-1/2 card-luxury text-[#070709] font-extrabold text-xs uppercase tracking-[0.2em] py-5 rounded-2xl text-center"
+          >
+            Voir les tarifs
+          </a>
+        </div>
 
-        <div className="
-          relative
-          z-10
-          max-w-7xl
-          w-full
-          mx-auto
-        ">
+      </section>
 
-          <div className="
-            grid
-            lg:grid-cols-[1.15fr_.85fr]
-            gap-14
-            lg:gap-20
-            items-center
-          ">
+      {/* MARQUEE DÉFILANT */}
+      <div className="relative z-10 py-5 border-y border-black/10 bg-black/[0.02] overflow-hidden whitespace-nowrap">
+        <div className="inline-block anim-marquee">
+          <span className="text-2xl md:text-4xl font-serif font-black uppercase tracking-widest text-black/20 mx-8">COUPE 15€</span>
+          <span className="text-2xl md:text-4xl font-serif italic text-black/50 mx-8">·</span>
+          <span className="text-2xl md:text-4xl font-serif font-black uppercase tracking-widest text-black/20 mx-8">COUPE + BARBE 20€</span>
+          <span className="text-2xl md:text-4xl font-serif italic text-black/50 mx-8">·</span>
+          <span className="text-2xl md:text-4xl font-serif font-black uppercase tracking-widest text-black/20 mx-8">TRANSFORMATION 20€</span>
+          <span className="text-2xl md:text-4xl font-serif italic text-black/50 mx-8">·</span>
+          <span className="text-2xl md:text-4xl font-serif font-black uppercase tracking-widest text-black/20 mx-8">COUPE 15€</span>
+          <span className="text-2xl md:text-4xl font-serif italic text-black/50 mx-8">·</span>
+        </div>
+      </div>
 
+      {/* SECTION PHILOSOPHIE */}
+      <section id="philosophie" className="relative z-10 py-32 px-6 md:px-16">
+        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+          
+          <div>
+            <span className="text-xs uppercase tracking-[0.5em] text-gray-500 font-extrabold block mb-4">01 // PHILOSOPHIE</span>
+            <h2 className="font-serif text-5xl md:text-7xl font-bold leading-tight text-[#070709]">
+              L'art <br />
+              <span className="italic font-light text-gray-500">du détail</span>
+            </h2>
+          </div>
 
-            {/* TEXTE */}
+          <div className="card-luxury p-10 rounded-[2.5rem]">
+            <p className="text-lg text-gray-700 font-light leading-relaxed">
+              Chez VDO Barber, chaque prestation est réalisée avec précision et exigence. Notre objectif : proposer une expérience masculine élégante dans un environnement moderne et raffiné.
+            </p>
+          </div>
 
-            <div className="
-              text-center
-              lg:text-left
-            ">
+        </div>
+      </section>
 
-              <div className="
-                home-fade-up
-                inline-flex
-                items-center
-                gap-4
-                mb-8
-              ">
-
-                <div className="
-                  h-px
-                  w-10
-                  bg-black
-                " />
-
-                <span className="
-                  text-[10px]
-                  md:text-xs
-                  uppercase
-                  tracking-[0.45em]
-                  text-gray-500
-                ">
-                  Barber Studio
-                </span>
-
-                <div className="
-                  h-px
-                  w-10
-                  bg-black
-                  lg:hidden
-                " />
-
-              </div>
-
-
-              <h1 className="
-                home-fade-up
-                font-serif
-                text-[4.2rem]
-                sm:text-7xl
-                md:text-8xl
-                lg:text-[7.5rem]
-                leading-[.82]
-                tracking-[-0.05em]
-              ">
-
-                VDO
-
-                <span className="
-                  block
-                  italic
-                  font-normal
-                  text-gray-500
-                  mt-3
-                ">
-                  Barber
-                </span>
-
-              </h1>
-
-
-              <div className="
-                home-fade-up
-                h-px
-                bg-black/15
-                my-9
-                max-w-md
-                mx-auto
-                lg:mx-0
-              " />
-
-
-              <p className="
-                home-fade-up
-                max-w-xl
-                mx-auto
-                lg:mx-0
-                text-sm
-                md:text-base
-                leading-8
-                text-gray-500
-              ">
-                Un espace dédié à l'élégance masculine,
-                où chaque détail est pensé pour offrir
-                une expérience unique.
-              </p>
-
-
-              <div className="
-                home-fade-up
-                mt-10
-                flex
-                flex-col
-                sm:flex-row
-                items-center
-                justify-center
-                lg:justify-start
-                gap-4
-              ">
-
-                <a
-                  href="/reservation"
-                  className="
-                    home-button
-                    home-shimmer
-                    inline-flex
-                    items-center
-                    justify-center
-                    bg-black
-                    text-white
-                    px-10
-                    py-5
-                    rounded-full
-                    tracking-[0.15em]
-                    uppercase
-                    text-[10px]
-                    font-medium
-                  "
-                >
-                  Réserver votre rendez-vous
-                </a>
-
-
-                <a
-                  href="#philosophie"
-                  className="
-                    inline-flex
-                    items-center
-                    justify-center
-                    px-8
-                    py-5
-                    rounded-full
-                    border
-                    border-gray-200
-                    text-gray-500
-                    text-[10px]
-                    uppercase
-                    tracking-[0.15em]
-                    transition-all
-                    duration-500
-                    hover:border-black
-                    hover:text-black
-                    hover:bg-white
-                  "
-                >
-                  Découvrir
-                </a>
-
-              </div>
-
+      {/* SECTION SERVICES & TARIFS */}
+      <section id="tarifs" className="relative z-10 py-32 px-6 md:px-16">
+        <div className="max-w-6xl mx-auto">
+          
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-20 gap-6">
+            <div>
+              <span className="text-xs uppercase tracking-[0.5em] text-gray-500 font-extrabold block mb-4">02 // MENU & TARIFS</span>
+              <h2 className="font-serif text-6xl md:text-8xl font-black text-[#070709]">Prestations</h2>
             </div>
+            <p className="text-gray-600 text-sm max-w-sm uppercase tracking-wider font-light">
+              Des prestations pensées pour révéler votre style et mettre chaque détail en valeur.
+            </p>
+          </div>
 
-
-            {/* BLOC VISUEL */}
-
-            <div className="
-              home-scale
-              hidden
-              lg:flex
-              justify-center
-              items-center
-            ">
-
-              <div className="
-                relative
-                w-[390px]
-                h-[520px]
-              ">
-
-                <div className="
-                  absolute
-                  inset-0
-                  rounded-[3rem]
-                  border
-                  border-gray-200
-                  rotate-6
-                " />
-
-
-                <div className="
-                  absolute
-                  inset-0
-                  rounded-[3rem]
-                  bg-black
-                  text-white
-                  flex
-                  items-center
-                  justify-center
-                  overflow-hidden
-                  shadow-[0_40px_100px_rgba(0,0,0,.18)]
-                ">
-
-                  <div className="
-                    absolute
-                    top-[-80px]
-                    right-[-80px]
-                    h-64
-                    w-64
-                    rounded-full
-                    border
-                    border-white/10
-                  " />
-
-                  <div className="
-                    absolute
-                    bottom-[-100px]
-                    left-[-100px]
-                    h-72
-                    w-72
-                    rounded-full
-                    border
-                    border-white/10
-                  " />
-
-
-                  <div className="
-                    relative
-                    z-10
-                    text-center
-                    home-float
-                  ">
-
-                    <p className="
-                      text-[9px]
-                      uppercase
-                      tracking-[0.5em]
-                      text-gray-500
-                      mb-6
-                    ">
-                      VDO
-                    </p>
-
-                    <p className="
-                      font-serif
-                      text-7xl
-                      italic
-                    ">
-                      Barber
-                    </p>
-
-                    <div className="
-                      h-px
-                      w-16
-                      bg-white/30
-                      mx-auto
-                      my-7
-                    " />
-
-                    <p className="
-                      text-[9px]
-                      uppercase
-                      tracking-[0.4em]
-                      text-gray-500
-                    ">
-                      Experience
-                    </p>
-
+          {/* GRILLE DE CARTE DES PRIX */}
+          <div className="grid md:grid-cols-3 gap-8">
+            
+            {/* SERVICE 1 : COUPE */}
+            <div className="card-luxury p-10 rounded-[2.5rem] flex flex-col justify-between min-h-[440px] relative overflow-hidden group">
+              <div>
+                <div className="flex justify-between items-start">
+                  <span className="text-xs uppercase tracking-[0.3em] text-gray-500 font-bold">01</span>
+                  <div className="price-badge px-5 py-2.5 rounded-full font-black text-xl shadow-lg">
+                    15 €
                   </div>
-
                 </div>
 
-              </div>
-
-            </div>
-
-          </div>
-
-
-          <div className="
-            absolute
-            bottom-10
-            left-1/2
-            -translate-x-1/2
-            hidden
-            md:flex
-            flex-col
-            items-center
-            gap-3
-            text-gray-400
-          ">
-
-            <span className="
-              text-[8px]
-              uppercase
-              tracking-[0.4em]
-            ">
-              Scroll
-            </span>
-
-            <div className="
-              h-10
-              w-px
-              bg-gradient-to-b
-              from-black
-              to-transparent
-            " />
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-      {/* PHILOSOPHIE */}
-
-      <section
-        id="philosophie"
-        className="
-          relative
-          px-5
-          md:px-10
-          py-24
-          md:py-36
-          bg-white
-        "
-      >
-
-        <div className="
-          max-w-6xl
-          mx-auto
-        ">
-
-          <div className="
-            grid
-            lg:grid-cols-[.7fr_1.3fr]
-            gap-14
-            lg:gap-24
-            items-center
-          ">
-
-
-            <div className="
-              home-fade-up
-            ">
-
-              <div className="
-                flex
-                items-center
-                gap-4
-                mb-7
-              ">
-
-                <span className="
-                  text-[9px]
-                  uppercase
-                  tracking-[0.4em]
-                  text-gray-400
-                ">
-                  01
-                </span>
-
-                <div className="
-                  h-px
-                  w-10
-                  bg-black
-                " />
-
-              </div>
-
-
-              <p className="
-                text-[10px]
-                uppercase
-                tracking-[0.4em]
-                text-gray-400
-                mb-4
-              ">
-                Notre philosophie
-              </p>
-
-
-              <h2 className="
-                font-serif
-                text-5xl
-                md:text-6xl
-                leading-none
-              ">
-
-                L'art
-
-                <span className="
-                  block
-                  italic
-                  font-normal
-                  text-gray-500
-                ">
-                  du détail
-                </span>
-
-              </h2>
-
-            </div>
-
-
-            <div className="
-              home-scale
-            ">
-
-              <div className="
-                border-l
-                border-black
-                pl-7
-                md:pl-10
-              ">
-
-                <p className="
-                  text-lg
-                  md:text-xl
-                  leading-9
-                  text-gray-600
-                ">
-                  Chez VDO Barber, chaque prestation est réalisée
-                  avec précision et exigence. Notre objectif :
-                  proposer une expérience masculine élégante
-                  dans un environnement moderne et raffiné.
+                <h3 className="font-serif text-3xl font-bold mt-8 mb-4 text-[#070709] transition-transform duration-300 group-hover:translate-x-1">Coupe</h3>
+                <p className="text-gray-600 text-sm font-light leading-relaxed">
+                  Une coupe personnalisée adaptée à votre style, avec un travail précis des longueurs, des volumes et des finitions pour un résultat soigné.
                 </p>
-
               </div>
 
+              <a href="/reservation" className="btn-badass-secondary p-4 -mx-4 rounded-xl pt-6 border-t border-black/10 flex justify-between items-center text-xs font-bold uppercase tracking-widest text-gray-600 group-hover:text-black">
+                <span className="group-hover:tracking-[0.2em] transition-all duration-300">Réservation</span>
+                <span className="text-lg group-hover:translate-x-3 transition-transform duration-300">→</span>
+              </a>
+            </div>
 
-              <div className="
-                mt-12
-                flex
-                items-center
-                gap-6
-              ">
+            {/* SERVICE 2 : COUPE + BARBE */}
+            <div className="card-luxury p-10 rounded-[2.5rem] flex flex-col justify-between min-h-[440px] relative overflow-hidden group bg-black/5 border-black/30 shadow-xl md:-translate-y-6">
+              <div>
+                <div className="flex justify-between items-start">
+                  <span className="text-xs uppercase tracking-[0.3em] text-gray-700 font-bold">02 // POPULAIRE</span>
+                  <div className="price-badge px-5 py-2.5 rounded-full font-black text-xl shadow-lg">
+                    20 €
+                  </div>
+                </div>
 
-                <div className="
-                  h-px
-                  w-16
-                  bg-black
-                " />
-
-                <p className="
-                  text-[9px]
-                  uppercase
-                  tracking-[0.35em]
-                  text-gray-400
-                ">
-                  Précision · Style · Excellence
+                <h3 className="font-serif text-3xl font-bold mt-8 mb-4 text-[#070709] transition-transform duration-300 group-hover:translate-x-1">Coupe + Barbe</h3>
+                <p className="text-gray-800 text-sm font-light leading-relaxed">
+                  Une prestation complète pour harmoniser la coupe de cheveux et la barbe, avec un travail précis des longueurs, des volumes et des contours pour un style soigné.
                 </p>
-
               </div>
 
+              <a href="/reservation" className="btn-badass-secondary p-4 -mx-4 rounded-xl pt-6 border-t border-black/20 flex justify-between items-center text-xs font-bold uppercase tracking-widest text-[#070709]">
+                <span className="group-hover:tracking-[0.2em] transition-all duration-300">Réservation</span>
+                <span className="text-lg group-hover:translate-x-3 transition-transform duration-300">→</span>
+              </a>
             </div>
 
-          </div>
+            {/* SERVICE 3 : TRANSFORMATION */}
+            <div className="card-luxury p-10 rounded-[2.5rem] flex flex-col justify-between min-h-[440px] relative overflow-hidden group">
+              <div>
+                <div className="flex justify-between items-start">
+                  <span className="text-xs uppercase tracking-[0.3em] text-gray-500 font-bold">03</span>
+                  <div className="price-badge px-5 py-2.5 rounded-full font-black text-xl shadow-lg">
+                    20 €
+                  </div>
+                </div>
 
+                <h3 className="font-serif text-3xl font-bold mt-8 mb-4 text-[#070709] transition-transform duration-300 group-hover:translate-x-1">Coupe Transformation</h3>
+                <p className="text-gray-600 text-sm font-light leading-relaxed">
+                  C’est une coupe réalisée après environ 2 mois de pousse pour pouvoir restructurer la chevelure. Elle permet de modifier la forme, la longueur et le volume afin de créer un nouveau style.
+                </p>
+              </div>
 
-          <div className="
-            mt-24
-            grid
-            grid-cols-2
-            md:grid-cols-4
-            gap-5
-          ">
-
-            <div className="
-              home-word
-              border
-              border-gray-100
-              rounded-3xl
-              p-7
-              md:p-9
-              bg-[#FAFAF8]
-            ">
-
-              <p className="
-                font-serif
-                text-4xl
-                md:text-5xl
-              ">
-                VDO
-              </p>
-
-              <p className="
-                mt-3
-                text-[9px]
-                uppercase
-                tracking-[0.3em]
-                text-gray-400
-              ">
-                Identité
-              </p>
-
-            </div>
-
-
-            <div className="
-              home-word
-              border
-              border-gray-100
-              rounded-3xl
-              p-7
-              md:p-9
-              bg-black
-              text-white
-              md:translate-y-8
-            ">
-
-              <p className="
-                font-serif
-                text-4xl
-                md:text-5xl
-              ">
-                Barber
-              </p>
-
-              <p className="
-                mt-3
-                text-[9px]
-                uppercase
-                tracking-[0.3em]
-                text-gray-500
-              ">
-                Savoir-faire
-              </p>
-
-            </div>
-
-
-            <div className="
-              hidden
-              md:block
-              border
-              border-gray-100
-              rounded-3xl
-              p-9
-              bg-[#FAFAF8]
-            ">
-
-              <p className="
-                font-serif
-                text-5xl
-              ">
-                01
-              </p>
-
-              <p className="
-                mt-3
-                text-[9px]
-                uppercase
-                tracking-[0.3em]
-                text-gray-400
-              ">
-                Vision
-              </p>
-
-            </div>
-
-
-            <div className="
-              hidden
-              md:block
-              border
-              border-gray-100
-              rounded-3xl
-              p-9
-              bg-[#FAFAF8]
-              md:translate-y-8
-            ">
-
-              <p className="
-                font-serif
-                text-5xl
-              ">
-                ∞
-              </p>
-
-              <p className="
-                mt-3
-                text-[9px]
-                uppercase
-                tracking-[0.3em]
-                text-gray-400
-              ">
-                Passion
-              </p>
-
+              <a href="/reservation" className="btn-badass-secondary p-4 -mx-4 rounded-xl pt-6 border-t border-black/10 flex justify-between items-center text-xs font-bold uppercase tracking-widest text-gray-600 group-hover:text-black">
+                <span className="group-hover:tracking-[0.2em] transition-all duration-300">Réservation</span>
+                <span className="text-lg group-hover:translate-x-3 transition-transform duration-300">→</span>
+              </a>
             </div>
 
           </div>
 
         </div>
-
       </section>
 
-
-      {/* SERVICES */}
-
-      <section className="
-        relative
-        px-5
-        md:px-10
-        py-24
-        md:py-36
-        bg-[#FAFAF8]
-      ">
-
-        <div className="
-          max-w-6xl
-          mx-auto
-        ">
-
-
-          <div className="
-            flex
-            flex-col
-            md:flex-row
-            md:items-end
-            md:justify-between
-            gap-8
-            mb-14
-          ">
-
-            <div>
-
-              <div className="
-                flex
-                items-center
-                gap-4
-                mb-7
-              ">
-
-                <span className="
-                  text-[9px]
-                  uppercase
-                  tracking-[0.4em]
-                  text-gray-400
-                ">
-                  02
-                </span>
-
-                <div className="
-                  h-px
-                  w-10
-                  bg-black
-                " />
-
-              </div>
-
-
-              <p className="
-                text-[10px]
-                uppercase
-                tracking-[0.4em]
-                text-gray-400
-                mb-4
-              ">
-                Prestations
-              </p>
-
-
-              <h2 className="
-                font-serif
-                text-5xl
-                md:text-6xl
-                leading-none
-              ">
-
-                Nos
-
-                <span className="
-                  italic
-                  font-normal
-                  text-gray-500
-                ">
-                  services
-                </span>
-
-              </h2>
-
-            </div>
-
-
-            <p className="
-              max-w-sm
-              text-sm
-              leading-7
-              text-gray-400
-              md:text-right
-            ">
-              Des prestations pensées pour révéler
-              votre style et mettre chaque détail
-              en valeur.
-            </p>
-
-          </div>
-
-
-          <div className="
-            grid
-            md:grid-cols-3
-            gap-5
-          ">
-
-
-            {/* COUPE */}
-
-            <div className="
-              home-service-card
-              group
-              relative
-              bg-white
-              border
-              border-gray-100
-              rounded-[2rem]
-              p-7
-              md:p-9
-              min-h-[330px]
-              flex
-              flex-col
-            ">
-
-              <div className="
-                home-service-number
-                h-11
-                w-11
-                rounded-full
-                bg-[#FAFAF8]
-                border
-                border-gray-100
-                flex
-                items-center
-                justify-center
-                text-[10px]
-                font-medium
-                mb-10
-              ">
-                01
-              </div>
-
-
-              <div className="
-                mt-auto
-              ">
-
-                <h3 className="
-                  font-serif
-                  text-3xl
-                  mb-4
-                ">
-                  Coupe
-                </h3>
-
-
-                <p className="
-                  text-sm
-                  leading-7
-                  text-gray-400
-                ">
-                  Une coupe personnalisée adaptée à votre style,
-                  avec un travail précis des longueurs, des volumes
-                  et des finitions pour un résultat soigné.
-                </p>
-
-              </div>
-
-
-              <div className="
-                absolute
-                bottom-7
-                right-7
-                opacity-0
-                group-hover:opacity-100
-                translate-x-3
-                group-hover:translate-x-0
-                transition-all
-                duration-500
-              ">
-                <span className="text-xl">
-                  ↗
-                </span>
-              </div>
-
-            </div>
-
-
-            {/* COUPE BARBE */}
-
-            <div className="
-              home-service-card
-              group
-              relative
-              bg-black
-              text-white
-              border
-              border-black
-              rounded-[2rem]
-              p-7
-              md:p-9
-              min-h-[330px]
-              flex
-              flex-col
-              md:translate-y-8
-            ">
-
-              <div className="
-                home-service-number
-                h-11
-                w-11
-                rounded-full
-                bg-white/10
-                border
-                border-white/10
-                flex
-                items-center
-                justify-center
-                text-[10px]
-                font-medium
-                mb-10
-              ">
-                02
-              </div>
-
-
-              <div className="
-                mt-auto
-              ">
-
-                <h3 className="
-                  font-serif
-                  text-3xl
-                  mb-4
-                ">
-                  Coupe + Barbe
-                </h3>
-
-
-                <p className="
-                  text-sm
-                  leading-7
-                  text-gray-500
-                ">
-                  Une prestation complète pour harmoniser la coupe
-                  de cheveux et la barbe, avec un travail précis des
-                  longueurs, des volumes et des contours pour un style soigné.
-                </p>
-
-              </div>
-
-
-              <div className="
-                absolute
-                bottom-7
-                right-7
-                opacity-0
-                group-hover:opacity-100
-                translate-x-3
-                group-hover:translate-x-0
-                transition-all
-                duration-500
-              ">
-                <span className="text-xl">
-                  ↗
-                </span>
-              </div>
-
-            </div>
-
-
-            {/* TRANSFORMATION */}
-
-            <div className="
-              home-service-card
-              group
-              relative
-              bg-white
-              border
-              border-gray-100
-              rounded-[2rem]
-              p-7
-              md:p-9
-              min-h-[330px]
-              flex
-              flex-col
-            ">
-
-              <div className="
-                home-service-number
-                h-11
-                w-11
-                rounded-full
-                bg-[#FAFAF8]
-                border
-                border-gray-100
-                flex
-                items-center
-                justify-center
-                text-[10px]
-                font-medium
-                mb-10
-              ">
-                03
-              </div>
-
-
-              <div className="
-                mt-auto
-              ">
-
-                <h3 className="
-                  font-serif
-                  text-3xl
-                  mb-4
-                ">
-                  Coupe Transformation
-                </h3>
-
-
-                <p className="
-                  text-sm
-                  leading-7
-                  text-gray-400
-                ">
-                  C’est une coupe réalisée après environ 2 mois de pousse
-                  pour pouvoir restructurer la chevelure. Elle permet de
-                  modifier la forme, la longueur et le volume afin de créer
-                  un nouveau style.
-                </p>
-
-              </div>
-
-
-              <div className="
-                absolute
-                bottom-7
-                right-7
-                opacity-0
-                group-hover:opacity-100
-                translate-x-3
-                group-hover:translate-x-0
-                transition-all
-                duration-500
-              ">
-                <span className="text-xl">
-                  ↗
-                </span>
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-      {/* CTA */}
-
-      <section className="
-        relative
-        px-5
-        md:px-10
-        py-24
-        md:py-36
-        bg-black
-        text-white
-        overflow-hidden
-      ">
-
-
-        <div className="
-          pointer-events-none
-          absolute
-          top-1/2
-          left-1/2
-          -translate-x-1/2
-          -translate-y-1/2
-          h-[500px]
-          w-[500px]
-          rounded-full
-          border
-          border-white/[0.05]
-        " />
-
-        <div className="
-          pointer-events-none
-          absolute
-          top-1/2
-          left-1/2
-          -translate-x-1/2
-          -translate-y-1/2
-          h-[700px]
-          w-[700px]
-          rounded-full
-          border
-          border-white/[0.035]
-        " />
-
-
-        <div className="
-          relative
-          z-10
-          max-w-4xl
-          mx-auto
-          text-center
-        ">
-
-          <div className="
-            flex
-            items-center
-            justify-center
-            gap-4
-            mb-8
-          ">
-
-            <div className="
-              h-px
-              w-10
-              bg-white/30
-            " />
-
-            <span className="
-              text-[9px]
-              uppercase
-              tracking-[0.45em]
-              text-gray-500
-            ">
-              VDO BARBER
-            </span>
-
-            <div className="
-              h-px
-              w-10
-              bg-white/30
-            " />
-
-          </div>
-
-
-          <h2 className="
-            font-serif
-            text-5xl
-            md:text-7xl
-            lg:text-8xl
-            leading-[.9]
-            tracking-[-0.04em]
-          ">
-
-            Prenez rendez-vous
-
-            <span className="
-              block
-              italic
-              font-normal
-              text-gray-500
-              mt-4
-            ">
-              chez VDO Barber
-            </span>
-
+      {/* SECTION RÉSERVATION / CTA FINAL */}
+      <section className="relative z-10 py-36 px-6 text-center border-t border-black/10">
+        <div className="max-w-3xl mx-auto">
+          
+          <h2 className="font-serif text-6xl md:text-8xl font-black tracking-tight mb-8 text-[#070709]">
+            Prenez rendez-vous <br />
+            <span className="italic font-light text-gray-500">chez VDO Barber</span>
           </h2>
 
-
-          <p className="
-            max-w-lg
-            mx-auto
-            mt-8
-            text-sm
-            md:text-base
-            leading-7
-            text-gray-500
-          ">
+          <p className="text-gray-600 text-base font-light mb-12">
             Réservez votre expérience premium en quelques secondes.
           </p>
 
-
           <a
             href="/reservation"
-            className="
-              home-button
-              home-shimmer
-              inline-flex
-              items-center
-              justify-center
-              mt-10
-              bg-white
-              text-black
-              px-12
-              py-5
-              rounded-full
-              tracking-[0.2em]
-              uppercase
-              text-[10px]
-              font-medium
-            "
+            className="btn-badass inline-block bg-[#070709] text-white font-black text-xs uppercase tracking-[0.3em] px-14 py-6 rounded-2xl shadow-2xl"
           >
             Réserver
           </a>
 
         </div>
-
       </section>
 
-
       {/* FOOTER */}
-
-      <footer className="
-        bg-[#FAFAF8]
-        px-5
-        md:px-10
-        py-10
-      ">
-
-        <div className="
-          max-w-6xl
-          mx-auto
-        ">
-
-          <div className="
-            flex
-            flex-col
-            md:flex-row
-            items-center
-            justify-between
-            gap-6
-          ">
-
-            <div className="
-              flex
-              items-center
-              gap-4
-            ">
-
-              <div className="
-                h-9
-                w-9
-                rounded-full
-                bg-black
-                text-white
-                flex
-                items-center
-                justify-center
-                font-serif
-                text-sm
-              ">
-                V
-              </div>
-
-
-              <div>
-
-                <p className="
-                  font-serif
-                  text-lg
-                ">
-                  VDO Barber
-                </p>
-
-                <p className="
-                  text-[8px]
-                  uppercase
-                  tracking-[0.35em]
-                  text-gray-400
-                  mt-1
-                ">
-                  Experience masculine
-                </p>
-
-              </div>
-
-            </div>
-
-
-            <p className="
-              text-[9px]
-              uppercase
-              tracking-[0.35em]
-              text-gray-400
-            ">
-              Victor.
-            </p>
-
-          </div>
-
+      <footer className="relative z-10 border-t border-black/10 py-10 px-6 md:px-16 bg-white/60">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-bold uppercase tracking-widest text-gray-500">
+          <p className="hover:text-black transition-colors cursor-default">VDO Barber Studio</p>
+          <p className="hover:text-black transition-colors cursor-default">Victor.</p>
         </div>
-
       </footer>
 
     </div>
-  )
+  );
 }
 
-export default Home
+export default Home;
