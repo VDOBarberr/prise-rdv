@@ -295,7 +295,7 @@ function MesRendezVous() {
                   <div className="mt-6 pt-5 border-t border-white/10 flex items-center justify-between text-xs text-gray-400 font-medium">
                     <span>Lieu : VDO Barber Studio</span>
                     <span className="text-[10px] tracking-widest uppercase text-gray-500">
-                      Vector.
+                      Victor.
                     </span>
                   </div>
                 </div>

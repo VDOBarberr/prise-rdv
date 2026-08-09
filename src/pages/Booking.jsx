@@ -1,6 +1,18 @@
 import { useEffect, useState } from "react"
 import { supabase } from "../services/supabase"
 
+// Fonction de normalisation du numéro de téléphone
+function formatPhoneNumber(phone) {
+  if (!phone) return ""
+  // Supprime tous les caractères non numériques (+, espaces, tirets, etc.)
+  let cleaned = phone.replace(/\D/g, "")
+  // Si le numéro commence par 33 (ex: +33612345678 -> 33612345678), remplace 33 par 0
+  if (cleaned.startsWith("33") && cleaned.length === 11) {
+    cleaned = "0" + cleaned.slice(2)
+  }
+  return cleaned
+}
+
 function Booking() {
   const [availability, setAvailability] = useState([])
   const [selectedDate, setSelectedDate] = useState("")
@@ -92,14 +104,16 @@ function Booking() {
         return
       }
 
+      const formattedPhone = formatPhoneNumber(form.phone)
+
       const appointmentData = {
         name: form.name,
-        phone: form.phone,
+        phone: formattedPhone,
         email: form.email,
         service: form.service,
         date: currentSlot.date,
         time: currentSlot.time,
-        status: "en attente"
+        status: "Confirmé"
       }
 
       const { error: appointmentError } = await supabase
@@ -113,7 +127,7 @@ function Booking() {
 
       const newConfirmation = {
         name: form.name,
-        phone: form.phone,
+        phone: formattedPhone,
         email: form.email,
         service: form.service,
         date: currentSlot.date,
@@ -268,7 +282,7 @@ function Booking() {
             </div>
 
             <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">
-              Un e-mail de confirmation vous a été envoyé. À très vite !
+              À très vite !
             </p>
           </div>
         ) : (
