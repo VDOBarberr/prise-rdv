@@ -32,6 +32,17 @@ function Admin() {
     "18h00",
   ];
 
+  // DÉCONNEXION
+  async function handleLogout() {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.log("Erreur lors de la déconnexion :", error);
+      alert("Erreur lors de la déconnexion.");
+    } else {
+      window.location.reload();
+    }
+  }
+
   // CHARGEMENT DES DONNÉES
   async function loadData() {
     const { data: availabilityData, error: availabilityError } = await supabase
@@ -213,6 +224,11 @@ function Admin() {
     await loadData();
   }
 
+  // Récupération des 3 derniers RDV enregistrés
+  const latestAppointments = [...appointments]
+    .sort((a, b) => b.id - a.id)
+    .slice(0, 3);
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#070709] overflow-hidden relative selection:bg-black selection:text-white font-sans pb-28">
       
@@ -303,7 +319,7 @@ function Admin() {
       <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12 pt-10">
         
         {/* HEADER SECTION */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
           <div>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-black/10 bg-black/5 text-[9px] tracking-[0.35em] uppercase text-gray-600 font-extrabold mb-4">
               <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
@@ -315,26 +331,81 @@ function Admin() {
             </h1>
           </div>
 
-          {/* SÉLECTEUR DE SEMAINE AVEC FLÈCHES UNIFORMISÉES */}
-          <div className="flex items-center gap-3 bg-white/80 backdrop-blur-md p-2 rounded-full border border-black/10 shadow-sm">
+          <div className="flex flex-wrap items-center gap-4">
+            {/* SÉLECTEUR DE SEMAINE AVEC FLÈCHES UNIFORMISÉES */}
+            <div className="flex items-center gap-3 bg-white/80 backdrop-blur-md p-2 rounded-full border border-black/10 shadow-sm">
+              <button
+                onClick={() => changeWeek(-1)}
+                className="w-12 h-12 rounded-full bg-[#070709] text-white hover:bg-gray-800 transition-all duration-300 flex items-center justify-center font-bold text-lg active:scale-90 shadow-md"
+                title="Semaine précédente"
+              >
+                ←
+              </button>
+              <span className="text-xs font-black uppercase tracking-widest px-4 text-gray-600">
+                Changer Semaine
+              </span>
+              <button
+                onClick={() => changeWeek(1)}
+                className="w-12 h-12 rounded-full bg-[#070709] text-white hover:bg-gray-800 transition-all duration-300 flex items-center justify-center font-bold text-lg active:scale-90 shadow-md"
+                title="Semaine suivante"
+              >
+                →
+              </button>
+            </div>
+
+            {/* BOUTON DE DÉCONNEXION DYNAMIQUE ET MODERNE */}
             <button
-              onClick={() => changeWeek(-1)}
-              className="w-12 h-12 rounded-full bg-[#070709] text-white hover:bg-gray-800 transition-all duration-300 flex items-center justify-center font-bold text-lg active:scale-90 shadow-md"
-              title="Semaine précédente"
+              onClick={handleLogout}
+              className="btn-badass bg-white/80 hover:bg-red-500 hover:text-white text-[#070709] border border-black/10 hover:border-red-500 px-6 py-4 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2.5 shadow-sm active:scale-95"
+              title="Se déconnecter de la session admin"
             >
-              ←
-            </button>
-            <span className="text-xs font-black uppercase tracking-widest px-4 text-gray-600">
-              Changer Semaine
-            </span>
-            <button
-              onClick={() => changeWeek(1)}
-              className="w-12 h-12 rounded-full bg-[#070709] text-white hover:bg-gray-800 transition-all duration-300 flex items-center justify-center font-bold text-lg active:scale-90 shadow-md"
-              title="Semaine suivante"
-            >
-              →
+              <span className="text-sm">⎋</span>
+              <span>Déconnexion</span>
             </button>
           </div>
+        </div>
+
+        {/* ENCADRÉ DERNIÈRES RÉSERVATIONS */}
+        <div className="card-dash rounded-3xl p-6 mb-10 shadow-sm border border-black/10 bg-white/60">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              <h3 className="text-[10px] uppercase tracking-[0.3em] font-extrabold text-gray-600">
+                Dernières réservations
+              </h3>
+            </div>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              {latestAppointments.length} récent(s)
+            </span>
+          </div>
+
+          {latestAppointments.length === 0 ? (
+            <p className="text-xs text-gray-400 font-medium italic">Aucun rendez-vous enregistré pour le moment.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {latestAppointments.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => setEditingAppointment({ ...item })}
+                  className="group relative bg-white/80 hover:bg-[#070709] hover:text-white p-4 rounded-2xl border border-black/5 hover:border-black transition-all duration-300 cursor-pointer flex items-center justify-between shadow-xs hover:shadow-lg"
+                >
+                  <div className="overflow-hidden">
+                    <p className="font-serif font-bold text-sm truncate group-hover:text-white transition-colors">
+                      {item.name}
+                    </p>
+                    <p className="text-[10px] text-gray-500 group-hover:text-gray-400 font-medium truncate">
+                      {item.service || "Service non spécifié"}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0 ml-3">
+                    <span className="inline-block px-2.5 py-1 rounded-lg bg-black/5 group-hover:bg-white/10 text-[9px] font-bold group-hover:text-gray-200 transition-colors">
+                      {item.date?.split("T")[0]} • {item.time}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* LISTE DES JOURS (SEMAINE) AVEC ANIMATION DE TRANSITION */}
