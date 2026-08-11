@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../services/supabase";
 
 function Admin() {
@@ -370,6 +371,16 @@ function Admin() {
               </button>
             </div>
 
+            {/* BOUTON VERS TOUS LES RENDEZ-VOUS */}
+            <Link
+              to="/admin/rendez-vous"
+              className="btn-badass bg-[#070709] text-white border border-black px-6 py-4 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2.5 shadow-md active:scale-95"
+              title="Consulter l'historique complet des rendez-vous"
+            >
+              <span className="text-sm">📋</span>
+              <span>Tous les RDV</span>
+            </Link>
+
             {/* BOUTON DE DÉCONNEXION DYNAMIQUE ET MODERNE */}
             <button
               onClick={handleLogout}
@@ -391,9 +402,12 @@ function Admin() {
                 Prochains rendez-vous
               </h3>
             </div>
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              {upcomingAppointments.length} à venir
-            </span>
+            <Link 
+              to="/admin/rendez-vous"
+              className="text-[10px] font-extrabold text-black hover:underline uppercase tracking-wider flex items-center gap-1"
+            >
+              Voir tout l'historique →
+            </Link>
           </div>
 
           {upcomingAppointments.length === 0 ? (

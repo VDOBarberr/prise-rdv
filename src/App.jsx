@@ -10,65 +10,67 @@ import Prestations from "./pages/Prestations"
 import Booking from "./pages/Booking"
 import ProtectedRoute from "./components/ProtectedRoute"
 import MesRendezVous from "./pages/MesRendezVous"
+import AllAppointments from "./pages/AllAppointments"
 
 function App(){
 
-return (
+  return (
 
-<BrowserRouter>
+    <BrowserRouter>
 
-<Navbar />
+      <Navbar />
 
+      <Routes>
 
-<Routes>
+        <Route
+          path="/"
+          element={<Home />}
+        />
 
+        <Route 
+          path="/reservation"
+          element={<Booking />}
+        />
 
-<Route
-path="/"
-element={<Home />}
-/>
+        <Route
+          path="/prestations"
+          element={<Prestations />}
+        />
 
+        <Route
+          path="/login"
+          element={<Login />}
+        />
 
-<Route 
-path="/reservation"
-element={<Booking />}
-/>
+        <Route
+          path="/mes-rendez-vous"
+          element={<MesRendezVous />}
+        />
 
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <Admin />
+            </ProtectedRoute>
+          }
+        />
 
-<Route
-path="/prestations"
-element={<Prestations />}
-/>
+        <Route
+          path="/admin/rendez-vous"
+          element={
+            <ProtectedRoute>
+              <AllAppointments />
+            </ProtectedRoute>
+          }
+        />
 
+      </Routes>
 
-<Route
-path="/login"
-element={<Login />}
-/>
+    </BrowserRouter>
 
-<Route
-  path="/mes-rendez-vous"
-  element={<MesRendezVous />}
-/>
+  )
 
-<Route
-path="/admin"
-element={
-<ProtectedRoute>
-<Admin />
-</ProtectedRoute>
 }
-/>
-
-
-</Routes>
-
-
-</BrowserRouter>
-
-)
-
-}
-
 
 export default App
