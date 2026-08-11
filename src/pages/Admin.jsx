@@ -224,9 +224,26 @@ function Admin() {
     await loadData();
   }
 
-  // Récupération des 3 derniers RDV enregistrés
-  const latestAppointments = [...appointments]
-    .sort((a, b) => b.id - a.id)
+  // Date du jour au format YYYY-MM-DD
+  const todayStr = formatDate(new Date());
+
+  // Récupération des 3 prochains RDV (à partir d'aujourd'hui)
+  const upcomingAppointments = appointments
+    .filter((item) => {
+      const appointmentDate = item.date?.split("T")[0];
+      return appointmentDate >= todayStr;
+    })
+    .sort((a, b) => {
+      const dateA = a.date?.split("T")[0];
+      const dateB = b.date?.split("T")[0];
+
+      // Tri par date croissante
+      if (dateA !== dateB) {
+        return dateA.localeCompare(dateB);
+      }
+      // Si la date est identique, tri par heure croissante
+      return a.time.localeCompare(b.time);
+    })
     .slice(0, 3);
 
   return (
@@ -365,25 +382,25 @@ function Admin() {
           </div>
         </div>
 
-        {/* ENCADRÉ DERNIÈRES RÉSERVATIONS */}
+        {/* ENCADRÉ PROCHAINS RENDEZ-VOUS */}
         <div className="card-dash rounded-3xl p-6 mb-10 shadow-sm border border-black/10 bg-white/60">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
               <h3 className="text-[10px] uppercase tracking-[0.3em] font-extrabold text-gray-600">
-                Dernières réservations
+                Prochains rendez-vous
               </h3>
             </div>
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              {latestAppointments.length} récent(s)
+              {upcomingAppointments.length} à venir
             </span>
           </div>
 
-          {latestAppointments.length === 0 ? (
-            <p className="text-xs text-gray-400 font-medium italic">Aucun rendez-vous enregistré pour le moment.</p>
+          {upcomingAppointments.length === 0 ? (
+            <p className="text-xs text-gray-400 font-medium italic">Aucun rendez-vous à venir pour le moment.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {latestAppointments.map((item) => (
+              {upcomingAppointments.map((item) => (
                 <div
                   key={item.id}
                   onClick={() => setEditingAppointment({ ...item })}
