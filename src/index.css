@@ -5,17 +5,14 @@
 html {
   width: 100%;
   max-width: 100%;
-  /* Indispensable pour permettre le scroll vertical natif sur Android/Xiaomi */
-  overflow-y: auto;
+  /* Remise à zéro pour laisser le navigateur mobile gérer le scroll natif */
   overflow-x: hidden;
 }
 
 body {
   width: 100%;
   max-width: 100%;
-  /* Retrait du overflow-x: clip qui bloque le scroll sur WebView Xiaomi */
-  overflow-x: hidden;
-  /* Correction touch-action pour autoriser explicitement le scroll vertical */
+  /* Retrait de user-select: none sur body pour éviter d'interférer avec le swipe tactile */
   touch-action: pan-y;
 }
 
@@ -24,12 +21,7 @@ body {
   max-width: 100%;
 }
 
-/* 
-  Sélection du contenu : 
-  On évite d'appliquer user-select sur le sélecteur universel '*' 
-  car cela désactive les gestures de scroll sur le navigateur Xiaomi (MIUI Browser).
-*/
-body,
+/* Sélection du contenu restreinte uniquement aux boutons et médias */
 button,
 a,
 img {
