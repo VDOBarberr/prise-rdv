@@ -2,40 +2,40 @@
 @import "tailwindcss";
 
 /* Configuration de base */
-html,
-body,
+html {
+  width: 100%;
+  max-width: 100%;
+  /* Indispensable pour permettre le scroll vertical natif sur Android/Xiaomi */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+body {
+  width: 100%;
+  max-width: 100%;
+  /* Retrait du overflow-x: clip qui bloque le scroll sur WebView Xiaomi */
+  overflow-x: hidden;
+  /* Correction touch-action pour autoriser explicitement le scroll vertical */
+  touch-action: pan-y;
+}
+
 #root {
   width: 100%;
   max-width: 100%;
 }
 
 /* 
-  Correctif pour le scroll sur Android / PC : 
-  overflow-x: clip empêche le débordement horizontal 
-  sans bloquer le scroll vertical (contrairement à overflow-x: hidden sur html/body)
+  Sélection du contenu : 
+  On évite d'appliquer user-select sur le sélecteur universel '*' 
+  car cela désactive les gestures de scroll sur le navigateur Xiaomi (MIUI Browser).
 */
-body {
-  overflow-x: clip;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* Sélection du contenu */
-* {
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* Éléments interactifs */
+body,
 button,
 a,
-input,
-textarea,
-select {
+img {
   user-select: none;
   -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Autorise la sélection pour la saisie dans les champs */
@@ -47,7 +47,6 @@ textarea {
 
 /* Empêche le glisser-déposer des images */
 img {
-  user-select: none;
   -webkit-user-drag: none;
 }
 
