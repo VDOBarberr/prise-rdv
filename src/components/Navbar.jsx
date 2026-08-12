@@ -15,6 +15,18 @@ function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Bloque le scroll du fond uniquement quand le menu mobile est OUVERT
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
+
   // Ferme le menu mobile automatiquement lors d'un changement de page
   const closeMenu = () => setMobileMenuOpen(false);
 
@@ -151,7 +163,7 @@ function Navbar() {
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Ouvrir le menu"
-            className="md:hidden flex flex-col justify-center items-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors focus:outline-none"
+            className="md:hidden flex flex-col justify-center items-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors focus:outline-none z-50"
           >
             <div className="w-5 flex flex-col items-center gap-1.5">
               <span
@@ -177,10 +189,10 @@ function Navbar() {
 
       {/* MENU MOBILE PLEIN ÉCRAN FLUIDE & PRATIQUE */}
       <div
-        className={`fixed inset-0 bg-white z-40 md:hidden flex flex-col justify-between pt-28 pb-12 px-8 transition-all duration-500 ease-in-out ${
+        className={`fixed inset-0 bg-white z-40 md:hidden flex flex-col justify-between pt-28 pb-12 px-8 overflow-y-auto transition-all duration-300 ease-in-out ${
           mobileMenuOpen
-            ? "opacity-100 pointer-events-auto translate-y-0"
-            : "opacity-0 pointer-events-none -translate-y-8"
+            ? "opacity-100 pointer-events-auto translate-y-0 visible"
+            : "opacity-0 pointer-events-none -translate-y-8 invisible"
         }`}
       >
         {/* LISTE DES LIENS MOBILE */}
