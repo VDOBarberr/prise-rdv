@@ -10,6 +10,17 @@ function Admin() {
   const [selectedDay, setSelectedDay] = useState(null);
   const [isChangingWeek, setIsChangingWeek] = useState(false);
 
+  // État pour maintenir l'heure courante à jour (se rafraîchit toutes les 30 secondes)
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(new Date());
+    }, 30000); // Mise à jour toutes les 30s
+
+    return () => clearInterval(timer);
+  }, []);
+
   const daysOrder = [
     "lundi",
     "mardi",
@@ -81,7 +92,7 @@ function Admin() {
     return result;
   }
 
-  // FORMAT DATE
+  // FORMAT DATE YYYY-MM-DD
   function formatDate(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -225,25 +236,25 @@ function Admin() {
     await loadData();
   }
 
-  // Date du jour au format YYYY-MM-DD
-  const todayStr = formatDate(new Date());
+  // Transforme un RDV (date + heure au format "11h00") en objet Date JS
+  function getAppointmentDateTime(item) {
+    if (!item.date || !item.time) return new Date(0);
 
-  // Récupération des 3 prochains RDV (à partir d'aujourd'hui)
+    const dateStr = item.date.split("T")[0]; // YYYY-MM-DD
+    const timeFormatted = item.time.replace("h", ":"); // "11h00" -> "11:00"
+
+    return new Date(`${dateStr}T${timeFormatted}:00`);
+  }
+
+  // Récupération des 3 prochains RDV (qui ne sont pas encore passés à la minute près)
   const upcomingAppointments = appointments
     .filter((item) => {
-      const appointmentDate = item.date?.split("T")[0];
-      return appointmentDate >= todayStr;
+      const appointmentDateTime = getAppointmentDateTime(item);
+      // On conserve le rendez-vous SEULEMENT s'il est dans le futur
+      return appointmentDateTime > now;
     })
     .sort((a, b) => {
-      const dateA = a.date?.split("T")[0];
-      const dateB = b.date?.split("T")[0];
-
-      // Tri par date croissante
-      if (dateA !== dateB) {
-        return dateA.localeCompare(dateB);
-      }
-      // Si la date est identique, tri par heure croissante
-      return a.time.localeCompare(b.time);
+      return getAppointmentDateTime(a) - getAppointmentDateTime(b);
     })
     .slice(0, 3);
 
@@ -265,7 +276,6 @@ function Admin() {
 
         .anim-rotate { animation: rotateSlow 25s linear infinite; }
 
-        /* Transition de changement de semaine */
         .week-grid {
           transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
@@ -275,7 +285,6 @@ function Admin() {
           transform: translateY(12px) scale(0.98);
         }
 
-        /* Carte Dashboard */
         .card-dash {
           background: rgba(255, 255, 255, 0.85);
           backdrop-filter: blur(20px);
@@ -350,7 +359,6 @@ function Admin() {
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
-            {/* SÉLECTEUR DE SEMAINE AVEC FLÈCHES UNIFORMISÉES */}
             <div className="flex items-center gap-3 bg-white/80 backdrop-blur-md p-2 rounded-full border border-black/10 shadow-sm">
               <button
                 onClick={() => changeWeek(-1)}
@@ -371,7 +379,6 @@ function Admin() {
               </button>
             </div>
 
-            {/* BOUTON VERS TOUS LES RENDEZ-VOUS */}
             <Link
               to="/admin/rendez-vous"
               className="btn-badass bg-[#070709] text-white border border-black px-6 py-4 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2.5 shadow-md active:scale-95"
@@ -381,7 +388,6 @@ function Admin() {
               <span>Tous les RDV</span>
             </Link>
 
-            {/* BOUTON DE DÉCONNEXION DYNAMIQUE ET MODERNE */}
             <button
               onClick={handleLogout}
               className="btn-badass bg-white/80 hover:bg-red-500 hover:text-white text-[#070709] border border-black/10 hover:border-red-500 px-6 py-4 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2.5 shadow-sm active:scale-95"
@@ -439,7 +445,7 @@ function Admin() {
           )}
         </div>
 
-        {/* LISTE DES JOURS (SEMAINE) AVEC ANIMATION DE TRANSITION */}
+        {/* LISTE DES JOURS (SEMAINE) */}
         <div className={`week-grid grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 mb-10 ${isChangingWeek ? 'week-grid-animating' : ''}`}>
           {getWeekDays().map((day) => {
             const isSelected = selectedDay?.date === day.date;
@@ -503,7 +509,6 @@ function Admin() {
         {/* DETAIL DU JOUR SÉLECTIONNÉ */}
         {selectedDay && (
           <div className="card-dash rounded-[2.5rem] overflow-hidden shadow-2xl border border-black/10">
-            {/* ENTÊTE DU JOUR */}
             <div className="p-8 md:p-10 border-b border-black/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/50">
               <div>
                 <span className="text-[10px] uppercase tracking-[0.35em] text-gray-600 font-extrabold block mb-1">
@@ -526,12 +531,9 @@ function Admin() {
 
                 return (
                   <div key={time} className="transition-all duration-300">
-                    {/* RENDEZ-VOUS EXISTANT */}
                     {appointment ? (
                       <div className="bg-[#070709] text-white rounded-2xl p-6 md:p-7 shadow-xl border border-white/10 flex flex-col lg:flex-row lg:items-center justify-between gap-6 transition-transform hover:scale-[1.005]">
-                        
                         <div className="flex flex-col sm:flex-row sm:items-center gap-6 flex-1">
-                          {/* HEURE */}
                           <div className="bg-white/10 px-5 py-3 rounded-xl border border-white/10 text-center sm:text-left shrink-0">
                             <span className="text-[8px] uppercase tracking-[0.3em] text-gray-400 font-extrabold block mb-0.5">
                               Heure
@@ -541,7 +543,6 @@ function Admin() {
                             </span>
                           </div>
 
-                          {/* INFOS CLIENT */}
                           <div>
                             <span className="text-[9px] uppercase tracking-[0.3em] text-gray-400 font-extrabold block mb-1">
                               Rendez-vous
@@ -554,14 +555,12 @@ function Admin() {
                             </span>
                           </div>
 
-                          {/* CONTACT */}
                           <div className="sm:border-l border-white/10 sm:pl-6 text-xs text-gray-400 space-y-1">
                             <p className="font-semibold text-gray-300">📞 {appointment.phone}</p>
                             <p className="break-all font-light">✉️ {appointment.email}</p>
                           </div>
                         </div>
 
-                        {/* BOUTON MODIFIER */}
                         <button
                           type="button"
                           onClick={() => setEditingAppointment({ ...appointment })}
@@ -571,7 +570,6 @@ function Admin() {
                         </button>
                       </div>
                     ) : (
-                      /* CRÉNEAU DISPONIBLE OU FERMÉ */
                       <button
                         onClick={() => {
                           if (active) {
@@ -628,7 +626,6 @@ function Admin() {
         {editingAppointment && (
           <div className="fixed inset-0 z-[999] bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
             <div className="w-full max-w-lg card-dash rounded-[2.5rem] p-8 sm:p-10 shadow-2xl max-h-[90vh] overflow-y-auto bg-white border border-black/10">
-              
               <div className="flex items-start justify-between mb-8">
                 <div>
                   <span className="text-[9px] uppercase tracking-[0.35em] text-gray-600 font-extrabold block mb-1">
@@ -649,7 +646,6 @@ function Admin() {
               </div>
 
               <div className="space-y-4">
-                {/* NOM */}
                 <div>
                   <label className="block text-[10px] uppercase tracking-[0.25em] text-gray-600 font-bold mb-1.5">
                     Nom
@@ -667,7 +663,6 @@ function Admin() {
                   />
                 </div>
 
-                {/* TELEPHONE */}
                 <div>
                   <label className="block text-[10px] uppercase tracking-[0.25em] text-gray-600 font-bold mb-1.5">
                     Téléphone
@@ -685,7 +680,6 @@ function Admin() {
                   />
                 </div>
 
-                {/* EMAIL */}
                 <div>
                   <label className="block text-[10px] uppercase tracking-[0.25em] text-gray-600 font-bold mb-1.5">
                     Email
@@ -703,7 +697,6 @@ function Admin() {
                   />
                 </div>
 
-                {/* DATE */}
                 <div>
                   <label className="block text-[10px] uppercase tracking-[0.25em] text-gray-600 font-bold mb-1.5">
                     Date
@@ -721,7 +714,6 @@ function Admin() {
                   />
                 </div>
 
-                {/* HEURE */}
                 <div>
                   <label className="block text-[10px] uppercase tracking-[0.25em] text-gray-600 font-bold mb-1.5">
                     Heure
@@ -744,7 +736,6 @@ function Admin() {
                   </select>
                 </div>
 
-                {/* PRESTATION */}
                 <div>
                   <label className="block text-[10px] uppercase tracking-[0.25em] text-gray-600 font-bold mb-1.5">
                     Prestation
@@ -762,7 +753,6 @@ function Admin() {
                   />
                 </div>
 
-                {/* ACTIONS */}
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"
@@ -781,7 +771,6 @@ function Admin() {
                   </button>
                 </div>
 
-                {/* SUPPRIMER */}
                 <button
                   type="button"
                   onClick={deleteAppointment}
@@ -790,7 +779,6 @@ function Admin() {
                   Supprimer le rendez-vous
                 </button>
               </div>
-
             </div>
           </div>
         )}

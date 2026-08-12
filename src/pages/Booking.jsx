@@ -4,13 +4,25 @@ import { supabase } from "../services/supabase"
 // Fonction de normalisation du numéro de téléphone
 function formatPhoneNumber(phone) {
   if (!phone) return ""
-  // Supprime tous les caractères non numériques (+, espaces, tirets, etc.)
   let cleaned = phone.replace(/\D/g, "")
-  // Si le numéro commence par 33 (ex: +33612345678 -> 33612345678), remplace 33 par 0
   if (cleaned.startsWith("33") && cleaned.length === 11) {
     cleaned = "0" + cleaned.slice(2)
   }
   return cleaned
+}
+
+// Fonction de vérification si le créneau est déjà passé
+function isSlotInPast(dateStr, timeStr) {
+  if (!dateStr || !timeStr) return false;
+
+  // Transforme "11h00" en "11:00"
+  const formattedTime = timeStr.replace("h", ":");
+  
+  // Date et heure complètes du créneau
+  const slotDate = new Date(`${dateStr}T${formattedTime}:00`);
+  const now = new Date();
+
+  return slotDate <= now;
 }
 
 function Booking() {
@@ -69,8 +81,9 @@ function Booking() {
     loadAvailability()
   }, [])
 
+  // Filtrage des créneaux : on garde uniquement ceux de la date sélectionnée QUI NE SONT PAS PASSÉS
   const availableSlots = availability.filter(
-    (slot) => slot.date === selectedDate
+    (slot) => slot.date === selectedDate && !isSlotInPast(slot.date, slot.time)
   )
 
   async function createAppointment(e) {
@@ -79,6 +92,13 @@ function Booking() {
 
     if (!selectedSlot) {
       setMessage("Veuillez sélectionner un créneau.")
+      return
+    }
+
+    // Sécurité supplémentaire si le temps s'est écoulé pendant la saisie du formulaire
+    if (isSlotInPast(selectedSlot.date, selectedSlot.time)) {
+      setMessage("Ce créneau horaire est déjà dépassé. Veuillez en choisir un autre.")
+      setSelectedSlot(null)
       return
     }
 
@@ -149,6 +169,9 @@ function Booking() {
       setLoading(false)
     }
   }
+
+  // Date du jour au format YYYY-MM-DD pour bloquer la sélection de jours passés dans le calendrier
+  const todayDateString = new Date().toISOString().split("T")[0]
 
   return (
     <div className="min-h-screen bg-[#FFFFFF] text-[#0A0A0A] font-sans pb-28 pt-10 px-4 sm:px-6 relative overflow-hidden selection:bg-black selection:text-white">
@@ -304,6 +327,7 @@ function Booking() {
 
               <input
                 type="date"
+                min={todayDateString} // Empêche de sélectionner des jours passés
                 value={selectedDate}
                 onChange={(e) => {
                   setSelectedDate(e.target.value)
