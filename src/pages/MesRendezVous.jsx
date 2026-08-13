@@ -19,6 +19,14 @@ function MesRendezVous() {
   const [rescheduleMessage, setRescheduleMessage] = useState("");
   const [rescheduling, setRescheduling] = useState(false);
 
+  // FONCTION POUR TRANSFORMER DATE + HEURE EN OBJET DATE JS
+  function getAppointmentDateTime(item) {
+    if (!item.date || !item.time) return new Date(0);
+    const dateStr = item.date.split("T")[0]; // YYYY-MM-DD
+    const timeFormatted = item.time.replace("h", ":"); // "11h00" -> "11:00"
+    return new Date(`${dateStr}T${timeFormatted}:00`);
+  }
+
   // FONCTION DE NORMALISATION DU TÉLÉPHONE (+33 6 XX... -> 06XX...)
   function cleanPhoneNumber(rawPhone) {
     if (!rawPhone) return "";
@@ -93,10 +101,7 @@ function MesRendezVous() {
     if (!appointment?.date || !appointment?.time) return false;
 
     try {
-      const datePart = appointment.date.split("T")[0];
-      const hour = parseInt(appointment.time.replace("h", "").replace("00", ""), 10) || 0;
-
-      const apptDate = new Date(`${datePart}T${String(hour).padStart(2, "0")}:00:00`);
+      const apptDate = getAppointmentDateTime(appointment);
       const now = new Date();
 
       const diffInMs = apptDate.getTime() - now.getTime();
@@ -226,6 +231,19 @@ function MesRendezVous() {
       setRescheduling(false);
     }
   }
+
+  // FILTRAGE ET TRI DES RENDEZ-VOUS (FUTURS vs PASSÉS)
+  const now = new Date();
+
+  // RDV à venir
+  const upcomingAppointments = appointments
+    .filter((item) => getAppointmentDateTime(item) >= now)
+    .sort((a, b) => getAppointmentDateTime(a) - getAppointmentDateTime(b));
+
+  // RDV passés (Archives)
+  const pastAppointments = appointments
+    .filter((item) => getAppointmentDateTime(item) < now)
+    .sort((a, b) => getAppointmentDateTime(b) - getAppointmentDateTime(a));
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#070709] overflow-hidden relative selection:bg-black selection:text-white font-sans pb-28">
@@ -420,104 +438,151 @@ function MesRendezVous() {
         {/* AFFICHAGE DES RÉSULTATS */}
         {appointments.length > 0 && (
           <section className="card-luxury rounded-[2.5rem] p-8 md:p-12 shadow-xl relative overflow-hidden">
+            
+            {/* SECTION 1 : RENDEZ-VOUS À VENIR */}
             <div className="flex items-center gap-4 mb-8">
               <div className="w-12 h-12 rounded-full bg-black text-white flex items-center justify-center font-bold text-lg shadow-md">
                 ✓
               </div>
               <div>
                 <span className="text-[10px] uppercase tracking-[0.35em] text-gray-500 font-extrabold block">
-                  Confirmation
+                  A VENIR
                 </span>
                 <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#070709]">
-                  {appointments.length > 1 ? "Vos rendez-vous" : "Votre rendez-vous"}
+                  {upcomingAppointments.length > 1 ? "Vos prochains rendez-vous" : "Votre prochain rendez-vous"}
                 </h2>
               </div>
             </div>
 
-            <div className="space-y-6">
-              {appointments.map((appointment) => {
-                const canChange = canReschedule(appointment);
+            {upcomingAppointments.length === 0 ? (
+              <div className="bg-black/5 border border-black/10 rounded-2xl p-6 text-center text-gray-500 text-sm font-medium mb-12">
+                Vous n'avez aucun rendez-vous à venir.
+              </div>
+            ) : (
+              <div className="space-y-6 mb-12">
+                {upcomingAppointments.map((appointment) => {
+                  const canChange = canReschedule(appointment);
 
-                return (
-                  <div
-                    key={appointment.id}
-                    className="card-appointment bg-[#070709] text-white rounded-3xl p-7 md:p-8 shadow-2xl relative overflow-hidden border border-white/10"
-                  >
-                    <div className="grid sm:grid-cols-2 gap-6">
-                      <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                        <p className="text-[9px] uppercase tracking-[0.3em] text-gray-400 font-extrabold mb-1">
-                          Date
-                        </p>
-                        <p className="font-serif text-2xl font-bold">
-                          {appointment.date}
-                        </p>
-                      </div>
+                  return (
+                    <div
+                      key={appointment.id}
+                      className="card-appointment bg-[#070709] text-white rounded-3xl p-7 md:p-8 shadow-2xl relative overflow-hidden border border-white/10"
+                    >
+                      <div className="grid sm:grid-cols-2 gap-6">
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                          <p className="text-[9px] uppercase tracking-[0.3em] text-gray-400 font-extrabold mb-1">
+                            Date
+                          </p>
+                          <p className="font-serif text-2xl font-bold">
+                            {appointment.date?.split("T")[0]}
+                          </p>
+                        </div>
 
-                      <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                        <p className="text-[9px] uppercase tracking-[0.3em] text-gray-400 font-extrabold mb-1">
-                          Heure
-                        </p>
-                        <p className="font-serif text-2xl font-bold">
-                          {appointment.time}
-                        </p>
-                      </div>
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                          <p className="text-[9px] uppercase tracking-[0.3em] text-gray-400 font-extrabold mb-1">
+                            Heure
+                          </p>
+                          <p className="font-serif text-2xl font-bold">
+                            {appointment.time}
+                          </p>
+                        </div>
 
-                      <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                        <p className="text-[9px] uppercase tracking-[0.3em] text-gray-400 font-extrabold mb-1">
-                          Prestation
-                        </p>
-                        <p className="font-serif text-xl font-bold text-gray-200">
-                          {appointment.service}
-                        </p>
-                      </div>
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                          <p className="text-[9px] uppercase tracking-[0.3em] text-gray-400 font-extrabold mb-1">
+                            Prestation
+                          </p>
+                          <p className="font-serif text-xl font-bold text-gray-200">
+                            {appointment.service}
+                          </p>
+                        </div>
 
-                      <div className="bg-white/5 p-4 rounded-2xl border border-white/5 flex flex-col justify-between">
-                        <p className="text-[9px] uppercase tracking-[0.3em] text-gray-400 font-extrabold mb-1">
-                          Statut
-                        </p>
-                        <div>
-                          <span className="inline-block px-3 py-1 rounded-full bg-white text-black text-[10px] font-black uppercase tracking-wider">
-                            {appointment.status || "Confirmé"}
-                          </span>
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5 flex flex-col justify-between">
+                          <p className="text-[9px] uppercase tracking-[0.3em] text-gray-400 font-extrabold mb-1">
+                            Statut
+                          </p>
+                          <div>
+                            <span className="inline-block px-3 py-1 rounded-full bg-white text-black text-[10px] font-black uppercase tracking-wider">
+                              {appointment.status || "Confirmé"}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="mt-6 pt-5 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div>
-                        {canChange ? (
-                          <button
-                            type="button"
-                            onClick={() => openRescheduleModal(appointment)}
-                            className="px-5 py-2.5 bg-white text-black hover:bg-gray-200 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer"
-                          >
-                            Décaler mon RDV
-                          </button>
-                        ) : (
-                          <div className="space-y-1">
+                      <div className="mt-6 pt-5 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                          {canChange ? (
                             <button
                               type="button"
-                              disabled
-                              className="px-5 py-2.5 bg-white/10 text-gray-500 rounded-xl text-xs font-extrabold uppercase tracking-wider cursor-not-allowed border border-white/5"
+                              onClick={() => openRescheduleModal(appointment)}
+                              className="px-5 py-2.5 bg-white text-black hover:bg-gray-200 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer"
                             >
                               Décaler mon RDV
                             </button>
-                            <p className="text-[10px] text-gray-400 italic">
-                              Modification possible jusqu'à 24h avant le rendez-vous.
-                            </p>
-                          </div>
-                        )}
+                          ) : (
+                            <div className="space-y-1">
+                              <button
+                                type="button"
+                                disabled
+                                className="px-5 py-2.5 bg-white/10 text-gray-500 rounded-xl text-xs font-extrabold uppercase tracking-wider cursor-not-allowed border border-white/5"
+                              >
+                                Décaler mon RDV
+                              </button>
+                              <p className="text-[10px] text-gray-400 italic">
+                                Modification possible jusqu'à 24h avant le rendez-vous.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="text-xs text-gray-400 font-medium sm:text-right">
+                          <p>Lieu : VDO Barber Studio</p>
+                        </div>
                       </div>
 
-                      <div className="text-xs text-gray-400 font-medium sm:text-right">
-                        <p>Lieu : VDO Barber Studio</p>
-                      </div>
                     </div>
+                  );
+                })}
+              </div>
+            )}
 
+            {/* SECTION 2 : ARCHIVES / HISTORIQUE DES RDV PASSÉS */}
+            {pastAppointments.length > 0 && (
+              <div className="pt-8 border-t border-black/10">
+                <div className="flex items-center gap-3 mb-6">
+                  <span className="text-xl">📜</span>
+                  <div>
+                    <span className="text-[10px] uppercase tracking-[0.35em] text-gray-400 font-extrabold block">
+                      ARCHIVES
+                    </span>
+                    <h3 className="font-serif text-xl font-bold text-gray-700">
+                      Historique des anciens rendez-vous
+                    </h3>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+
+                <div className="space-y-4 opacity-75">
+                  {pastAppointments.map((appointment) => (
+                    <div
+                      key={appointment.id}
+                      className="bg-gray-100 border border-gray-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                    >
+                      <div>
+                        <p className="font-serif font-bold text-base text-gray-800">
+                          {appointment.service}
+                        </p>
+                        <p className="text-xs text-gray-500 font-medium">
+                          Passé le {appointment.date?.split("T")[0]} à {appointment.time}
+                        </p>
+                      </div>
+                      <span className="self-start sm:self-auto px-3 py-1 rounded-full bg-gray-200 text-gray-600 text-[10px] font-bold uppercase tracking-wider">
+                        Terminé
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
           </section>
         )}
 
@@ -549,7 +614,7 @@ function MesRendezVous() {
                 <div className="bg-black/5 p-4 rounded-2xl text-xs">
                   <p className="text-gray-500 uppercase tracking-widest font-bold text-[9px] mb-1">RDV actuel</p>
                   <p className="font-bold text-black text-sm">
-                    {reschedulingAppointment.date} à {reschedulingAppointment.time} ({reschedulingAppointment.service})
+                    {reschedulingAppointment.date?.split("T")[0]} à {reschedulingAppointment.time} ({reschedulingAppointment.service})
                   </p>
                 </div>
 

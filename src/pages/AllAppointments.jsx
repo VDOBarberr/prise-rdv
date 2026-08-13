@@ -8,13 +8,24 @@ function AllAppointments() {
   const [loading, setLoading] = useState(true);
   const [editingAppointment, setEditingAppointment] = useState(null);
   
-  // Options de tri : 'created-desc', 'created-asc', 'name-asc', 'name-desc'
-  const [sortBy, setSortBy] = useState("created-desc");
+  // Onglet actif : 'upcoming' (À venir) ou 'past' (Passés)
+  const [activeTab, setActiveTab] = useState("upcoming");
+
+  // Options de tri : 'created-desc', 'created-asc', 'name-asc', 'name-desc', 'date-asc', 'date-desc'
+  const [sortBy, setSortBy] = useState("date-asc");
 
   const times = [
     "09h00", "10h00", "11h00", "12h00", "13h00",
     "14h00", "15h00", "16h00", "17h00", "18h00"
   ];
+
+  // Helper pour convertir la date + heure en objet Date JS
+  function getAppointmentDateTime(item) {
+    if (!item.date || !item.time) return new Date(0);
+    const dateStr = item.date.split("T")[0];
+    const timeFormatted = item.time.replace("h", ":");
+    return new Date(`${dateStr}T${timeFormatted}:00`);
+  }
 
   async function fetchAppointments() {
     setLoading(true);
@@ -34,37 +45,54 @@ function AllAppointments() {
     fetchAppointments();
   }, []);
 
-  // FILTRAGE ET TRI
-  const processedAppointments = appointments
-    .filter((item) => {
-      const query = searchQuery.toLowerCase();
-      return (
-        item.name?.toLowerCase().includes(query) ||
-        item.email?.toLowerCase().includes(query) ||
-        item.phone?.includes(query) ||
-        item.service?.toLowerCase().includes(query) ||
-        item.date?.includes(query)
-      );
-    })
-    .sort((a, b) => {
-      if (sortBy === "created-desc") {
-        const dateA = new Date(a.created_at || a.id);
-        const dateB = new Date(b.created_at || b.id);
-        return dateB - dateA;
-      } 
-      if (sortBy === "created-asc") {
-        const dateA = new Date(a.created_at || a.id);
-        const dateB = new Date(b.created_at || b.id);
-        return dateA - dateB;
-      }
-      if (sortBy === "name-asc") {
-        return (a.name || "").localeCompare(b.name || "");
-      }
-      if (sortBy === "name-desc") {
-        return (b.name || "").localeCompare(a.name || "");
-      }
-      return 0;
-    });
+  const now = new Date();
+
+  // FILTRAGE SELON L'ONGLET + LA RECHERCHE
+  const filteredAppointments = appointments.filter((item) => {
+    const itemDate = getAppointmentDateTime(item);
+    const matchesTab = activeTab === "upcoming" ? itemDate >= now : itemDate < now;
+
+    const query = searchQuery.toLowerCase();
+    const matchesQuery =
+      item.name?.toLowerCase().includes(query) ||
+      item.email?.toLowerCase().includes(query) ||
+      item.phone?.includes(query) ||
+      item.service?.toLowerCase().includes(query) ||
+      item.date?.includes(query);
+
+    return matchesTab && matchesQuery;
+  });
+
+  // TRI
+  const processedAppointments = [...filteredAppointments].sort((a, b) => {
+    if (sortBy === "date-asc") {
+      return getAppointmentDateTime(a) - getAppointmentDateTime(b);
+    }
+    if (sortBy === "date-desc") {
+      return getAppointmentDateTime(b) - getAppointmentDateTime(a);
+    }
+    if (sortBy === "created-desc") {
+      const dateA = new Date(a.created_at || a.id);
+      const dateB = new Date(b.created_at || b.id);
+      return dateB - dateA;
+    } 
+    if (sortBy === "created-asc") {
+      const dateA = new Date(a.created_at || a.id);
+      const dateB = new Date(b.created_at || b.id);
+      return dateA - dateB;
+    }
+    if (sortBy === "name-asc") {
+      return (a.name || "").localeCompare(b.name || "");
+    }
+    if (sortBy === "name-desc") {
+      return (b.name || "").localeCompare(a.name || "");
+    }
+    return 0;
+  });
+
+  // Compteurs globaux
+  const upcomingCount = appointments.filter((item) => getAppointmentDateTime(item) >= now).length;
+  const pastCount = appointments.filter((item) => getAppointmentDateTime(item) < now).length;
 
   // MODIFICATION
   async function saveAppointment() {
@@ -148,7 +176,7 @@ function AllAppointments() {
             </Link>
             
             <h1 className="font-serif text-4xl sm:text-6xl font-black uppercase tracking-tight text-[#070709]">
-              Historique <span className="italic font-light text-gray-400">Global</span>
+              Tous les <span className="italic font-light text-gray-400">Rendez-vous</span>
             </h1>
           </div>
 
@@ -158,10 +186,10 @@ function AllAppointments() {
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
               <div>
                 <span className="text-[9px] uppercase tracking-widest text-gray-400 font-extrabold block">
-                  Total
+                  À venir
                 </span>
                 <span className="text-sm font-black tracking-tight">
-                  {appointments.length} RDV
+                  {upcomingCount} RDV
                 </span>
               </div>
             </div>
@@ -169,14 +197,39 @@ function AllAppointments() {
             <div className="bg-black text-white px-5 py-3 rounded-2xl shadow-lg flex items-center gap-3">
               <div>
                 <span className="text-[9px] uppercase tracking-widest text-gray-400 font-extrabold block">
-                  Filtrés
+                  Passés
                 </span>
                 <span className="text-sm font-black tracking-tight">
-                  {processedAppointments.length} affiché(s)
+                  {pastCount} RDV
                 </span>
               </div>
             </div>
           </div>
+        </div>
+
+        {/* ONGLETS "À VENIR" ET "PASSÉS" */}
+        <div className="flex items-center gap-3 border-b border-black/10 pb-4">
+          <button
+            onClick={() => setActiveTab("upcoming")}
+            className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+              activeTab === "upcoming"
+                ? "bg-black text-white shadow-lg scale-[1.02]"
+                : "bg-white/80 text-gray-500 hover:text-black hover:bg-white border border-black/5"
+            }`}
+          >
+            📅 Rendez-vous à venir ({upcomingCount})
+          </button>
+
+          <button
+            onClick={() => setActiveTab("past")}
+            className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+              activeTab === "past"
+                ? "bg-black text-white shadow-lg scale-[1.02]"
+                : "bg-white/80 text-gray-500 hover:text-black hover:bg-white border border-black/5"
+            }`}
+          >
+            📜 Historique / Passés ({pastCount})
+          </button>
         </div>
 
         {/* BARRE D'OUTILS ET DE RECHERCHE ULTRA-PRATIQUE */}
@@ -214,10 +267,12 @@ function AllAppointments() {
               onChange={(e) => setSortBy(e.target.value)}
               className="bg-transparent text-xs font-black uppercase tracking-wider text-[#070709] outline-none cursor-pointer py-1.5"
             >
+              <option value="date-asc">📅 Date RDV : Proche → Éloigné</option>
+              <option value="date-desc">📅 Date RDV : Éloigné → Proche</option>
               <option value="created-desc">⚡ Prise de RDV : Récent → Ancien</option>
               <option value="created-asc">⚡ Prise de RDV : Ancien → Récent</option>
-              <option value="name-asc">🔤 Prénom / Nom : A → Z</option>
-              <option value="name-desc">🔤 Prénom / Nom : Z → A</option>
+              <option value="name-asc">🔤 Nom : A → Z</option>
+              <option value="name-desc">🔤 Nom : Z → A</option>
             </select>
           </div>
         </div>
@@ -236,7 +291,11 @@ function AllAppointments() {
               📂
             </div>
             <p className="text-sm font-bold text-gray-600">
-              Aucun rendez-vous ne correspond à vos critères.
+              {searchQuery
+                ? "Aucun rendez-vous ne correspond à vos critères."
+                : activeTab === "upcoming"
+                ? "Aucun rendez-vous à venir pour le moment."
+                : "Aucun rendez-vous passé enregistré dans l'historique."}
             </p>
             {searchQuery && (
               <button
@@ -257,72 +316,92 @@ function AllAppointments() {
                     <th className="py-5 px-6">Coordonnées</th>
                     <th className="py-5 px-6">Prestation</th>
                     <th className="py-5 px-6">RDV Prévu</th>
+                    <th className="py-5 px-6">Statut</th>
                     <th className="py-5 px-6 text-right">Gestion</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/5 text-xs font-medium">
-                  {processedAppointments.map((item) => (
-                    <tr 
-                      key={item.id} 
-                      className="group hover:bg-black/[0.02] transition-colors duration-200"
-                    >
-                      {/* NOM CLIENT */}
-                      <td className="py-5 px-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-black/5 group-hover:bg-black group-hover:text-white transition-colors duration-300 flex items-center justify-center font-bold text-xs shrink-0">
-                            {item.name ? item.name.charAt(0).toUpperCase() : "?"}
+                  {processedAppointments.map((item) => {
+                    const isPast = getAppointmentDateTime(item) < now;
+
+                    return (
+                      <tr 
+                        key={item.id} 
+                        className={`group hover:bg-black/[0.02] transition-colors duration-200 ${
+                          isPast ? "opacity-75 bg-gray-50/50" : ""
+                        }`}
+                      >
+                        {/* NOM CLIENT */}
+                        <td className="py-5 px-6">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-black/5 group-hover:bg-black group-hover:text-white transition-colors duration-300 flex items-center justify-center font-bold text-xs shrink-0">
+                              {item.name ? item.name.charAt(0).toUpperCase() : "?"}
+                            </div>
+                            <div>
+                              <p className="font-serif font-bold text-base text-[#070709] group-hover:translate-x-0.5 transition-transform">
+                                {item.name}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-serif font-bold text-base text-[#070709] group-hover:translate-x-0.5 transition-transform">
-                              {item.name}
-                            </p>
+                        </td>
+
+                        {/* CONTACT */}
+                        <td className="py-5 px-6 text-gray-600 space-y-1">
+                          <div className="flex items-center gap-1.5 font-semibold text-gray-800">
+                            <span className="text-[10px] text-gray-400">📞</span>
+                            <span>{item.phone}</span>
                           </div>
-                        </div>
-                      </td>
+                          <div className="flex items-center gap-1.5 text-[11px] text-gray-400 font-light">
+                            <span>✉️</span>
+                            <span>{item.email}</span>
+                          </div>
+                        </td>
 
-                      {/* CONTACT */}
-                      <td className="py-5 px-6 text-gray-600 space-y-1">
-                        <div className="flex items-center gap-1.5 font-semibold text-gray-800">
-                          <span className="text-[10px] text-gray-400">📞</span>
-                          <span>{item.phone}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[11px] text-gray-400 font-light">
-                          <span>✉️</span>
-                          <span>{item.email}</span>
-                        </div>
-                      </td>
-
-                      {/* PRESTATION */}
-                      <td className="py-5 px-6">
-                        <span className="inline-block px-3.5 py-1.5 rounded-xl bg-black/5 group-hover:bg-black/10 text-[10px] font-black text-gray-800 uppercase tracking-wider transition-colors">
-                          {item.service || "Non précisé"}
-                        </span>
-                      </td>
-
-                      {/* DATE DU RDV */}
-                      <td className="py-5 px-6">
-                        <div className="inline-flex flex-col">
-                          <span className="font-bold text-sm text-[#070709]">
-                            {item.date?.split("T")[0]}
+                        {/* PRESTATION */}
+                        <td className="py-5 px-6">
+                          <span className="inline-block px-3.5 py-1.5 rounded-xl bg-black/5 group-hover:bg-black/10 text-[10px] font-black text-gray-800 uppercase tracking-wider transition-colors">
+                            {item.service || "Non précisé"}
                           </span>
-                          <span className="text-[10px] font-extrabold uppercase tracking-widest text-gray-400">
-                            à {item.time}
-                          </span>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* ACTION / MODIFIER */}
-                      <td className="py-5 px-6 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setEditingAppointment({ ...item })}
-                          className="px-4 py-2.5 rounded-xl bg-black/5 hover:bg-black hover:text-white border border-black/5 text-[10px] font-black uppercase tracking-wider transition-all duration-300 shadow-xs active:scale-95"
-                        >
-                          Éditer
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                        {/* DATE DU RDV */}
+                        <td className="py-5 px-6">
+                          <div className="inline-flex flex-col">
+                            <span className="font-bold text-sm text-[#070709]">
+                              {item.date?.split("T")[0]}
+                            </span>
+                            <span className="text-[10px] font-extrabold uppercase tracking-widest text-gray-400">
+                              à {item.time}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* STATUT */}
+                        <td className="py-5 px-6">
+                          {isPast ? (
+                            <span className="inline-block px-3 py-1 rounded-full bg-gray-200 text-gray-600 text-[9px] font-black uppercase tracking-wider">
+                              Terminé
+                            </span>
+                          ) : (
+                            <span className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[9px] font-black uppercase tracking-wider">
+                              À venir
+                            </span>
+                          )}
+                        </td>
+
+                        {/* ACTION / MODIFIER */}
+                        <td className="py-5 px-6 text-right">
+                          <button
+                            type="button"
+                            onClick={() => setEditingAppointment({ ...item })}
+                            className="px-4 py-2.5 rounded-xl bg-black/5 hover:bg-black hover:text-white border border-black/5 text-[10px] font-black uppercase tracking-wider transition-all duration-300 shadow-xs active:scale-95 cursor-pointer"
+                          >
+                            Éditer
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -348,7 +427,7 @@ function AllAppointments() {
                 <button
                   type="button"
                   onClick={() => setEditingAppointment(null)}
-                  className="w-10 h-10 rounded-full bg-black/5 hover:bg-black hover:text-white flex items-center justify-center font-bold text-base transition-all duration-300 active:scale-90"
+                  className="w-10 h-10 rounded-full bg-black/5 hover:bg-black hover:text-white flex items-center justify-center font-bold text-base transition-all duration-300 active:scale-90 cursor-pointer"
                 >
                   ✕
                 </button>
@@ -440,7 +519,7 @@ function AllAppointments() {
                   <button
                     type="button"
                     onClick={() => setEditingAppointment(null)}
-                    className="flex-1 border border-black/10 py-4 rounded-2xl text-xs font-black uppercase tracking-wider hover:bg-gray-100 transition-colors"
+                    className="flex-1 border border-black/10 py-4 rounded-2xl text-xs font-black uppercase tracking-wider hover:bg-gray-100 transition-colors cursor-pointer"
                   >
                     Annuler
                   </button>
@@ -448,7 +527,7 @@ function AllAppointments() {
                   <button
                     type="button"
                     onClick={saveAppointment}
-                    className="flex-1 bg-[#070709] text-white py-4 rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg hover:bg-gray-800 transition-all active:scale-95"
+                    className="flex-1 bg-[#070709] text-white py-4 rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg hover:bg-gray-800 transition-all active:scale-95 cursor-pointer"
                   >
                     Sauvegarder
                   </button>
@@ -457,7 +536,7 @@ function AllAppointments() {
                 <button
                   type="button"
                   onClick={deleteAppointment}
-                  className="w-full border border-red-500/20 text-red-600 hover:bg-red-500 hover:text-white py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 mt-2"
+                  className="w-full border border-red-500/20 text-red-600 hover:bg-red-500 hover:text-white py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 mt-2 cursor-pointer"
                 >
                   Supprimer ce rendez-vous
                 </button>
