@@ -11,6 +11,7 @@ import Booking from "./pages/Booking"
 import ProtectedRoute from "./components/ProtectedRoute"
 import MesRendezVous from "./pages/MesRendezVous"
 import AllAppointments from "./pages/AllAppointments"
+import ChiffreAffaires from "./pages/ChiffreAffaires"
 
 function App(){
 
@@ -61,6 +62,15 @@ function App(){
           element={
             <ProtectedRoute>
               <AllAppointments />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/chiffre-affaires"
+          element={
+            <ProtectedRoute>
+              <ChiffreAffaires />
             </ProtectedRoute>
           }
         />

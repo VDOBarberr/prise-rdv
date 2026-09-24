@@ -124,7 +124,7 @@ function Admin() {
     });
   }, [currentDate, daysOrder]);
 
-  // VÉRIFIER DISPONIBILITÉ ET OBTENIR RDV EN O(1)
+  // VÉRIFIER DISPONIBILITÉ ET OBTENIR RDV
   const isAvailable = useCallback((date, time) => {
     return availabilityMap.has(`${date}_${time}`);
   }, [availabilityMap]);
@@ -133,7 +133,7 @@ function Admin() {
     return appointmentsMap.get(`${date}_${time}`);
   }, [appointmentsMap]);
 
-  // AJOUT DISPONIBILITÉ (Mise à jour d'état locale instantanée)
+  // AJOUT DISPONIBILITÉ
   async function addAvailability(date, time) {
     if (isAvailable(date, time)) return;
 
@@ -143,23 +143,20 @@ function Admin() {
 
     const newAvailability = { date, day, time, active: true };
 
-    // Mise à jour optimiste
     setAvailability((prev) => [...prev, newAvailability]);
 
     const { error, data } = await supabase.from("availability").insert(newAvailability).select();
 
     if (error) {
       console.error(error);
-      // Rollback en cas d'erreur
       setAvailability((prev) => prev.filter((item) => !(item.date === date && item.time === time)));
     } else if (data && data.length > 0) {
       setAvailability((prev) => prev.map((item) => item.date === date && item.time === time ? data[0] : item));
     }
   }
 
-  // SUPPRIMER DISPONIBILITÉ (Mise à jour d'état locale instantanée)
+  // SUPPRIMER DISPONIBILITÉ
   async function removeAvailability(date, time) {
-    // Mise à jour optimiste
     setAvailability((prev) => prev.filter((item) => !(item.date === date && item.time === time)));
 
     const { error } = await supabase
@@ -170,7 +167,7 @@ function Admin() {
 
     if (error) {
       console.error(error);
-      await loadData(); // Rechargement de secours en cas d'échec
+      await loadData();
     }
   }
 
@@ -250,7 +247,7 @@ function Admin() {
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#070709] overflow-hidden relative selection:bg-black selection:text-white font-sans pb-28">
       
-      {/* STYLES & ANIMATIONS MODERNES */}
+      {/* STYLES & ANIMATIONS */}
       <style>{`
         @keyframes rotateSlow {
           0% { transform: rotate(0deg) scale(1); }
@@ -368,6 +365,7 @@ function Admin() {
               </button>
             </div>
 
+            {/* BOUTON TOUS LES RDV */}
             <Link
               to="/admin/rendez-vous"
               className="btn-badass bg-[#070709] text-white border border-black px-6 py-4 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2.5 shadow-md active:scale-95"
@@ -375,6 +373,16 @@ function Admin() {
             >
               <span className="text-sm">📋</span>
               <span>Tous les RDV</span>
+            </Link>
+
+            {/* BOUTON CHIFFRE D'AFFAIRES */}
+            <Link
+              to="/admin/chiffre-affaires"
+              className="btn-badass bg-[#070709] text-white border border-black px-6 py-4 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2.5 shadow-md active:scale-95"
+              title="Consulter les statistiques financières"
+            >
+              <span className="text-sm">📊</span>
+              <span>Chiffre d'Affaires</span>
             </Link>
 
             <button
@@ -389,7 +397,7 @@ function Admin() {
         </div>
 
         {/* ENCADRÉ PROCHAINS RENDEZ-VOUS */}
-        <div className="card-dash rounded-3xl p-6 mb-10 shadow-sm border border-black/10 bg-white/60">
+        <div className="card-dash rounded-3xl p-6 mb-8 shadow-sm border border-black/10 bg-white/60">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
