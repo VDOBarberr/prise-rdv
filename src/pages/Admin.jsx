@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../services/supabase";
 
@@ -9,79 +9,79 @@ function Admin() {
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [selectedDay, setSelectedDay] = useState(null);
   const [isChangingWeek, setIsChangingWeek] = useState(false);
-
-  // État pour maintenir l'heure courante à jour (se rafraîchit toutes les 30 secondes)
   const [now, setNow] = useState(new Date());
+
+  const daysOrder = useMemo(
+    () => ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"],
+    []
+  );
+
+  const times = useMemo(
+    () => [
+      "09h00", "10h00", "11h00", "12h00", "13h00",
+      "14h00", "15h00", "16h00", "17h00", "18h00",
+    ],
+    []
+  );
 
   useEffect(() => {
     const timer = setInterval(() => {
       setNow(new Date());
-    }, 30000); // Mise à jour toutes les 30s
-
+    }, 30000);
     return () => clearInterval(timer);
   }, []);
 
-  const daysOrder = [
-    "lundi",
-    "mardi",
-    "mercredi",
-    "jeudi",
-    "vendredi",
-    "samedi",
-    "dimanche",
-  ];
+  // CHARGEMENT DES DONNÉES
+  const loadData = useCallback(async () => {
+    const [{ data: availabilityData, error: availabilityError }, { data: appointmentsData, error: appointmentsError }] =
+      await Promise.all([
+        supabase.from("availability").select("*"),
+        supabase.from("appointments").select("*"),
+      ]);
 
-  const times = [
-    "09h00",
-    "10h00",
-    "11h00",
-    "12h00",
-    "13h00",
-    "14h00",
-    "15h00",
-    "16h00",
-    "17h00",
-    "18h00",
-  ];
+    if (availabilityError) console.error("Erreur availability:", availabilityError);
+    if (appointmentsError) console.error("Erreur appointments:", appointmentsError);
+
+    setAvailability(availabilityData || []);
+    setAppointments(appointmentsData || []);
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // DÉCONNEXION
   async function handleLogout() {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      console.log("Erreur lors de la déconnexion :", error);
+      console.error("Erreur lors de la déconnexion :", error);
       alert("Erreur lors de la déconnexion.");
     } else {
       window.location.reload();
     }
   }
 
-  // CHARGEMENT DES DONNÉES
-  async function loadData() {
-    const { data: availabilityData, error: availabilityError } = await supabase
-      .from("availability")
-      .select("*");
+  // INDEXATION OPTIMISÉE DES DONNÉES EN MÉMOIRE
+  const availabilityMap = useMemo(() => {
+    const map = new Map();
+    availability.forEach((item) => {
+      if (item.active) {
+        map.set(`${item.date}_${item.time}`, item);
+      }
+    });
+    return map;
+  }, [availability]);
 
-    if (availabilityError) {
-      console.log(availabilityError);
-      return;
-    }
-
-    const { data: appointmentsData, error: appointmentsError } = await supabase
-      .from("appointments")
-      .select("*");
-
-    if (appointmentsError) {
-      console.log(appointmentsError);
-      return;
-    }
-
-    setAvailability(availabilityData || []);
-    setAppointments(appointmentsData || []);
-  }
-
-  useEffect(() => {
-    loadData();
-  }, []);
+  const appointmentsMap = useMemo(() => {
+    const map = new Map();
+    appointments.forEach((item) => {
+      const dateStr = item.date?.split("T")[0];
+      if (dateStr && item.time) {
+        map.set(`${dateStr}_${item.time}`, item);
+      }
+    });
+    return map;
+  }, [appointments]);
 
   // DATE DU LUNDI
   function getMonday(date) {
@@ -100,7 +100,7 @@ function Admin() {
     return `${year}-${month}-${day}`;
   }
 
-  // CHANGER DE SEMAINE AVEC ANIMATION
+  // CHANGER DE SEMAINE
   function changeWeek(value) {
     setIsChangingWeek(true);
     setTimeout(() => {
@@ -112,7 +112,7 @@ function Admin() {
   }
 
   // JOURS DE LA SEMAINE
-  function getWeekDays() {
+  const weekDays = useMemo(() => {
     const monday = getMonday(currentDate);
     return daysOrder.map((day, index) => {
       const date = new Date(monday);
@@ -122,45 +122,46 @@ function Admin() {
         date: formatDate(date),
       };
     });
-  }
+  }, [currentDate, daysOrder]);
 
-  // SÉLECTION JOUR
-  function selectDay(day) {
-    setSelectedDay(day);
-  }
+  // VÉRIFIER DISPONIBILITÉ ET OBTENIR RDV EN O(1)
+  const isAvailable = useCallback((date, time) => {
+    return availabilityMap.has(`${date}_${time}`);
+  }, [availabilityMap]);
 
-  // VÉRIFIER DISPONIBILITÉ
-  function isAvailable(date, time) {
-    return availability.some(
-      (item) => item.date === date && item.time === time && item.active === true
-    );
-  }
+  const getAppointment = useCallback((date, time) => {
+    return appointmentsMap.get(`${date}_${time}`);
+  }, [appointmentsMap]);
 
-  // AJOUT DISPONIBILITÉ
+  // AJOUT DISPONIBILITÉ (Mise à jour d'état locale instantanée)
   async function addAvailability(date, time) {
     if (isAvailable(date, time)) return;
 
-    const day = new Date(date)
-      .toLocaleDateString("fr-FR", { weekday: "long" })
-      .toLowerCase();
+    const [year, month, dayNum] = date.split("-").map(Number);
+    const localDate = new Date(year, month - 1, dayNum);
+    const day = localDate.toLocaleDateString("fr-FR", { weekday: "long" }).toLowerCase();
 
-    const { error } = await supabase.from("availability").insert({
-      date: date,
-      day: day,
-      time: time,
-      active: true,
-    });
+    const newAvailability = { date, day, time, active: true };
+
+    // Mise à jour optimiste
+    setAvailability((prev) => [...prev, newAvailability]);
+
+    const { error, data } = await supabase.from("availability").insert(newAvailability).select();
 
     if (error) {
-      console.log(error);
-      return;
+      console.error(error);
+      // Rollback en cas d'erreur
+      setAvailability((prev) => prev.filter((item) => !(item.date === date && item.time === time)));
+    } else if (data && data.length > 0) {
+      setAvailability((prev) => prev.map((item) => item.date === date && item.time === time ? data[0] : item));
     }
-
-    await loadData();
   }
 
-  // SUPPRIMER DISPONIBILITÉ
+  // SUPPRIMER DISPONIBILITÉ (Mise à jour d'état locale instantanée)
   async function removeAvailability(date, time) {
+    // Mise à jour optimiste
+    setAvailability((prev) => prev.filter((item) => !(item.date === date && item.time === time)));
+
     const { error } = await supabase
       .from("availability")
       .delete()
@@ -168,19 +169,9 @@ function Admin() {
       .eq("time", time);
 
     if (error) {
-      console.log(error);
-      return;
+      console.error(error);
+      await loadData(); // Rechargement de secours en cas d'échec
     }
-
-    await loadData();
-  }
-
-  // TROUVER RENDEZ-VOUS
-  function getAppointment(date, time) {
-    return appointments.find((item) => {
-      const appointmentDate = item.date?.split("T")[0];
-      return appointmentDate === date && item.time === time;
-    });
   }
 
   // MODIFIER RENDEZ-VOUS
@@ -189,74 +180,72 @@ function Admin() {
 
     const newDate = editingAppointment.date?.split("T")[0];
 
+    const updatedAppointment = {
+      ...editingAppointment,
+      date: newDate,
+    };
+
+    setAppointments((prev) =>
+      prev.map((item) => (item.id === updatedAppointment.id ? updatedAppointment : item))
+    );
+    setEditingAppointment(null);
+
     const { error } = await supabase
       .from("appointments")
       .update({
-        name: editingAppointment.name,
-        phone: editingAppointment.phone,
-        email: editingAppointment.email,
-        service: editingAppointment.service,
-        date: newDate,
-        time: editingAppointment.time,
+        name: updatedAppointment.name,
+        phone: updatedAppointment.phone,
+        email: updatedAppointment.email,
+        service: updatedAppointment.service,
+        date: updatedAppointment.date,
+        time: updatedAppointment.time,
       })
-      .eq("id", editingAppointment.id);
+      .eq("id", updatedAppointment.id);
 
     if (error) {
-      console.log(error);
+      console.error(error);
       alert("Erreur lors de la modification du rendez-vous.");
-      return;
+      await loadData();
     }
-
-    setEditingAppointment(null);
-    await loadData();
   }
 
   // SUPPRIMER RENDEZ-VOUS
   async function deleteAppointment() {
     if (!editingAppointment) return;
 
-    const confirmation = window.confirm(
-      "Voulez-vous vraiment supprimer ce rendez-vous ?"
-    );
-
+    const confirmation = window.confirm("Voulez-vous vraiment supprimer ce rendez-vous ?");
     if (!confirmation) return;
 
-    const { error } = await supabase
-      .from("appointments")
-      .delete()
-      .eq("id", editingAppointment.id);
+    const idToDelete = editingAppointment.id;
+    setAppointments((prev) => prev.filter((item) => item.id !== idToDelete));
+    setEditingAppointment(null);
+
+    const { error } = await supabase.from("appointments").delete().eq("id", idToDelete);
 
     if (error) {
-      console.log(error);
+      console.error(error);
       alert("Erreur lors de la suppression.");
-      return;
+      await loadData();
     }
-
-    setEditingAppointment(null);
-    await loadData();
   }
 
-  // Transforme un RDV (date + heure au format "11h00") en objet Date JS
-  function getAppointmentDateTime(item) {
-    if (!item.date || !item.time) return new Date(0);
-
-    const dateStr = item.date.split("T")[0]; // YYYY-MM-DD
-    const timeFormatted = item.time.replace("h", ":"); // "11h00" -> "11:00"
-
-    return new Date(`${dateStr}T${timeFormatted}:00`);
-  }
-
-  // Récupération des 3 prochains RDV (qui ne sont pas encore passés à la minute près)
-  const upcomingAppointments = appointments
-    .filter((item) => {
-      const appointmentDateTime = getAppointmentDateTime(item);
-      // On conserve le rendez-vous SEULEMENT s'il est dans le futur
-      return appointmentDateTime > now;
-    })
-    .sort((a, b) => {
-      return getAppointmentDateTime(a) - getAppointmentDateTime(b);
-    })
-    .slice(0, 3);
+  // PROCHAINS RDV MEMOISÉS
+  const upcomingAppointments = useMemo(() => {
+    return appointments
+      .filter((item) => {
+        if (!item.date || !item.time) return false;
+        const dateStr = item.date.split("T")[0];
+        const timeFormatted = item.time.replace("h", ":");
+        const appointmentDateTime = new Date(`${dateStr}T${timeFormatted}:00`);
+        return appointmentDateTime > now;
+      })
+      .sort((a, b) => {
+        const dateA = new Date(`${a.date.split("T")[0]}T${a.time.replace("h", ":")}:00`);
+        const dateB = new Date(`${b.date.split("T")[0]}T${b.time.replace("h", ":")}:00`);
+        return dateA - dateB;
+      })
+      .slice(0, 3);
+  }, [appointments, now]);
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#070709] overflow-hidden relative selection:bg-black selection:text-white font-sans pb-28">
@@ -447,13 +436,13 @@ function Admin() {
 
         {/* LISTE DES JOURS (SEMAINE) */}
         <div className={`week-grid grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 mb-10 ${isChangingWeek ? 'week-grid-animating' : ''}`}>
-          {getWeekDays().map((day) => {
+          {weekDays.map((day) => {
             const isSelected = selectedDay?.date === day.date;
 
             return (
               <button
                 key={day.date}
-                onClick={() => selectDay(day)}
+                onClick={() => setSelectedDay(day)}
                 className={`
                   relative text-left p-5 rounded-3xl transition-all duration-300 cursor-pointer overflow-hidden
                   ${

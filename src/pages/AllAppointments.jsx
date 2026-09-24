@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../services/supabase";
 
@@ -7,20 +7,25 @@ function AllAppointments() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [editingAppointment, setEditingAppointment] = useState(null);
+  const [saving, setSaving] = useState(false);
   
   // Options de tri : 'created-desc', 'created-asc', 'name-asc', 'name-desc'
   const [sortBy, setSortBy] = useState("created-desc");
 
-  const times = [
-    "09h00", "10h00", "11h00", "12h00", "13h00",
-    "14h00", "15h00", "16h00", "17h00", "18h00"
-  ];
+  const times = useMemo(
+    () => [
+      "09h00", "10h00", "11h00", "12h00", "13h00",
+      "14h00", "15h00", "16h00", "17h00", "18h00"
+    ],
+    []
+  );
 
-  async function fetchAppointments() {
+  const fetchAppointments = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("appointments")
-      .select("*");
+      .select("*")
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Erreur chargement rendez-vous :", error);
@@ -28,73 +33,85 @@ function AllAppointments() {
       setAppointments(data || []);
     }
     setLoading(false);
-  }
+  }, []);
 
   useEffect(() => {
     fetchAppointments();
-  }, []);
+  }, [fetchAppointments]);
 
-  // FILTRAGE ET TRI
-  const processedAppointments = appointments
-    .filter((item) => {
-      const query = searchQuery.toLowerCase();
-      return (
-        item.name?.toLowerCase().includes(query) ||
-        item.email?.toLowerCase().includes(query) ||
-        item.phone?.includes(query) ||
-        item.service?.toLowerCase().includes(query) ||
-        item.date?.includes(query)
-      );
-    })
-    .sort((a, b) => {
-      if (sortBy === "created-desc") {
-        const dateA = new Date(a.created_at || a.id);
-        const dateB = new Date(b.created_at || b.id);
-        return dateB - dateA;
-      } 
-      if (sortBy === "created-asc") {
-        const dateA = new Date(a.created_at || a.id);
-        const dateB = new Date(b.created_at || b.id);
-        return dateA - dateB;
-      }
-      if (sortBy === "name-asc") {
-        return (a.name || "").localeCompare(b.name || "");
-      }
-      if (sortBy === "name-desc") {
-        return (b.name || "").localeCompare(a.name || "");
-      }
-      return 0;
-    });
+  // FILTRAGE ET TRI MÉMORISÉS (Ne recalculent que si les dépendances changent)
+  const processedAppointments = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
 
-  // MODIFICATION
+    return appointments
+      .filter((item) => {
+        if (!query) return true;
+        return (
+          item.name?.toLowerCase().includes(query) ||
+          item.email?.toLowerCase().includes(query) ||
+          item.phone?.includes(query) ||
+          item.service?.toLowerCase().includes(query) ||
+          item.date?.includes(query)
+        );
+      })
+      .sort((a, b) => {
+        if (sortBy === "created-desc") {
+          return new Date(b.created_at || b.id) - new Date(a.created_at || a.id);
+        } 
+        if (sortBy === "created-asc") {
+          return new Date(a.created_at || a.id) - new Date(b.created_at || b.id);
+        }
+        if (sortBy === "name-asc") {
+          return (a.name || "").localeCompare(b.name || "");
+        }
+        if (sortBy === "name-desc") {
+          return (b.name || "").localeCompare(a.name || "");
+        }
+        return 0;
+      });
+  }, [appointments, searchQuery, sortBy]);
+
+  // MODIFICATION OPTIMISÉE SANS REREQUÊTAGE COMPLET
   async function saveAppointment() {
     if (!editingAppointment) return;
 
+    setSaving(true);
     const newDate = editingAppointment.date?.split("T")[0];
+
+    const updatedFields = {
+      name: editingAppointment.name,
+      phone: editingAppointment.phone,
+      email: editingAppointment.email,
+      service: editingAppointment.service,
+      date: newDate,
+      time: editingAppointment.time,
+    };
 
     const { error } = await supabase
       .from("appointments")
-      .update({
-        name: editingAppointment.name,
-        phone: editingAppointment.phone,
-        email: editingAppointment.email,
-        service: editingAppointment.service,
-        date: newDate,
-        time: editingAppointment.time,
-      })
+      .update(updatedFields)
       .eq("id", editingAppointment.id);
 
+    setSaving(false);
+
     if (error) {
-      console.log(error);
+      console.error(error);
       alert("Erreur lors de la modification du rendez-vous.");
       return;
     }
 
+    // Mise à jour de l'état local direct pour éviter un fetch global
+    setAppointments((prev) =>
+      prev.map((item) =>
+        item.id === editingAppointment.id
+          ? { ...item, ...updatedFields }
+          : item
+      )
+    );
     setEditingAppointment(null);
-    await fetchAppointments();
   }
 
-  // SUPPRESSION
+  // SUPPRESSION OPTIMISÉE
   async function deleteAppointment() {
     if (!editingAppointment) return;
 
@@ -104,19 +121,26 @@ function AllAppointments() {
 
     if (!confirmation) return;
 
+    setSaving(true);
+
     const { error } = await supabase
       .from("appointments")
       .delete()
       .eq("id", editingAppointment.id);
 
+    setSaving(false);
+
     if (error) {
-      console.log(error);
+      console.error(error);
       alert("Erreur lors de la suppression.");
       return;
     }
 
+    // Retrait immédiat de l'état local
+    setAppointments((prev) =>
+      prev.filter((item) => item.id !== editingAppointment.id)
+    );
     setEditingAppointment(null);
-    await fetchAppointments();
   }
 
   return (
@@ -179,7 +203,7 @@ function AllAppointments() {
           </div>
         </div>
 
-        {/* BARRE D'OUTILS ET DE RECHERCHE ULTRA-PRATIQUE */}
+        {/* BARRE D'OUTILS ET DE RECHERCHE */}
         <div className="bg-white/80 backdrop-blur-xl border border-black/10 p-3 sm:p-4 rounded-3xl shadow-xl shadow-black/[0.02] space-y-3 md:space-y-0 md:flex md:items-center md:gap-4">
           
           {/* BARRE DE RECHERCHE */}
@@ -222,7 +246,7 @@ function AllAppointments() {
           </div>
         </div>
 
-        {/* LISTE DES RENDEZ-VOUS SUR CARTE ULTRA-MODERNE */}
+        {/* LISTE DES RENDEZ-VOUS */}
         {loading ? (
           <div className="py-24 text-center space-y-4">
             <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin mx-auto" />
@@ -329,7 +353,7 @@ function AllAppointments() {
           </div>
         )}
 
-        {/* MODALE DE MODIFICATION DESIGN HAUT DE GAMME */}
+        {/* MODALE DE MODIFICATION */}
         {editingAppointment && (
           <div className="fixed inset-0 z-[999] bg-black/70 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fade-in">
             <div className="w-full max-w-lg rounded-[2.5rem] p-6 sm:p-10 shadow-2xl max-h-[90vh] overflow-y-auto bg-white border border-black/10 relative">
@@ -347,6 +371,7 @@ function AllAppointments() {
 
                 <button
                   type="button"
+                  disabled={saving}
                   onClick={() => setEditingAppointment(null)}
                   className="w-10 h-10 rounded-full bg-black/5 hover:bg-black hover:text-white flex items-center justify-center font-bold text-base transition-all duration-300 active:scale-90"
                 >
@@ -439,25 +464,28 @@ function AllAppointments() {
                 <div className="flex gap-3 pt-6">
                   <button
                     type="button"
+                    disabled={saving}
                     onClick={() => setEditingAppointment(null)}
-                    className="flex-1 border border-black/10 py-4 rounded-2xl text-xs font-black uppercase tracking-wider hover:bg-gray-100 transition-colors"
+                    className="flex-1 border border-black/10 py-4 rounded-2xl text-xs font-black uppercase tracking-wider hover:bg-gray-100 transition-colors disabled:opacity-50"
                   >
                     Annuler
                   </button>
 
                   <button
                     type="button"
+                    disabled={saving}
                     onClick={saveAppointment}
-                    className="flex-1 bg-[#070709] text-white py-4 rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg hover:bg-gray-800 transition-all active:scale-95"
+                    className="flex-1 bg-[#070709] text-white py-4 rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg hover:bg-gray-800 transition-all active:scale-95 disabled:opacity-50"
                   >
-                    Sauvegarder
+                    {saving ? "Sauvegarde..." : "Sauvegarder"}
                   </button>
                 </div>
 
                 <button
                   type="button"
+                  disabled={saving}
                   onClick={deleteAppointment}
-                  className="w-full border border-red-500/20 text-red-600 hover:bg-red-500 hover:text-white py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 mt-2"
+                  className="w-full border border-red-500/20 text-red-600 hover:bg-red-500 hover:text-white py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 mt-2 disabled:opacity-50"
                 >
                   Supprimer ce rendez-vous
                 </button>

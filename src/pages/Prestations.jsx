@@ -1,139 +1,149 @@
 import React from "react";
 
-function Prestations() {
-  const coupes = [
-    {
-      name: "Burst Fade",
-      price: "15 €",
-      description:
-        "Un dégradé arrondi autour de l’oreille pour un style moderne, marqué et tendance.",
-      image: "/images/burst-fade.jpg"
-    },
-    {
-      name: "Taper Fade",
-      price: "15 €",
-      description:
-        "Un dégradé discret sur les tempes et la nuque pour une finition propre et élégante.",
-      image: "/images/taper-fade.jpg"
-    },
-    {
-      name: "Mid Fade",
-      price: "15 €",
-      description:
-        "Un dégradé intermédiaire qui apporte un équilibre parfait entre volume et précision.",
-      image: "/images/mid-fade.jpg"
-    }
-  ];
+// Extraire la chaîne de styles hors du composant pour éviter de la réinstancier à chaque cycle de rendu
+const STYLES = `
+  @keyframes rotateSlow {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.1); }
+    100% { transform: rotate(360deg) scale(1); }
+  }
 
+  @keyframes marqueeSlow {
+    0% { transform: translateX(0%); }
+    100% { transform: translateX(-50%); }
+  }
+
+  @keyframes lightSweep {
+    0% { transform: translateX(-150%) skewX(-25deg); }
+    100% { transform: translateX(250%) skewX(-25deg); }
+  }
+
+  .anim-rotate { animation: rotateSlow 25s linear infinite; }
+  .anim-marquee { animation: marqueeSlow 18s linear infinite; }
+
+  /* Carte de luxe interactive */
+  .card-luxury {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
+    will-change: transform;
+  }
+
+  .card-luxury:hover {
+    transform: translateY(-12px);
+    background: rgba(255, 255, 255, 1);
+    border-color: rgba(0, 0, 0, 0.2);
+    box-shadow: 0 35px 70px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Zoom dynamique sur image */
+  .img-zoom {
+    transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+  }
+
+  .card-luxury:hover .img-zoom {
+    transform: scale(1.08);
+  }
+
+  /* Animation badge prix */
+  .price-badge {
+    background: #070709;
+    color: #FFFFFF;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+    will-change: transform;
+  }
+
+  .card-luxury:hover .price-badge {
+    transform: scale(1.1) rotate(-3deg);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Animation flèche interactive */
+  .arrow-btn {
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.4s ease, color 0.4s ease;
+    will-change: transform;
+  }
+
+  .card-luxury:hover .arrow-btn {
+    transform: translate(4px, -4px) scale(1.1);
+    background-color: #070709;
+    color: #FFFFFF;
+  }
+
+  /* Animation des Boutons de Réservation */
+  .btn-badass {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease;
+    user-select: none;
+    will-change: transform;
+  }
+
+  .btn-badass::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 50%;
+    height: 200%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.45),
+      transparent
+    );
+    transform: translateX(-150%) skewX(-25deg);
+  }
+
+  .btn-badass:hover::before {
+    animation: lightSweep 0.85s ease-in-out infinite;
+  }
+
+  .btn-badass:hover {
+    transform: translateY(-4px) scale(1.03);
+    box-shadow: 0 20px 40px -10px rgba(7, 7, 9, 0.35);
+  }
+
+  .btn-badass:active {
+    transform: translateY(2px) scale(0.93) !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
+  }
+`;
+
+const COUPES = [
+  {
+    id: "burst-fade",
+    name: "Burst Fade",
+    price: "15 €",
+    description:
+      "Un dégradé arrondi autour de l’oreille pour un style moderne, marqué et tendance.",
+    image: "/images/burst-fade.jpg"
+  },
+  {
+    id: "taper-fade",
+    name: "Taper Fade",
+    price: "15 €",
+    description:
+      "Un dégradé discret sur les tempes et la nuque pour une finition propre et élégante.",
+    image: "/images/taper-fade.jpg"
+  },
+  {
+    id: "mid-fade",
+    name: "Mid Fade",
+    price: "15 €",
+    description:
+      "Un dégradé intermédiaire qui apporte un équilibre parfait entre volume et précision.",
+    image: "/images/mid-fade.jpg"
+  }
+];
+
+function Prestations() {
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#070709] overflow-hidden relative selection:bg-black selection:text-white font-sans">
 
-      {/* DÉFINITION DES STYLES ET ANIMATIONS ULTRA-MODERNES */}
-      <style>{`
-        @keyframes rotateSlow {
-          0% { transform: rotate(0deg) scale(1); }
-          50% { transform: rotate(180deg) scale(1.1); }
-          100% { transform: rotate(360deg) scale(1); }
-        }
-
-        @keyframes marqueeSlow {
-          0% { transform: translateX(0%); }
-          100% { transform: translateX(-50%); }
-        }
-
-        @keyframes lightSweep {
-          0% { transform: translateX(-150%) skewX(-25deg); }
-          100% { transform: translateX(250%) skewX(-25deg); }
-        }
-
-        .anim-rotate { animation: rotateSlow 25s linear infinite; }
-        .anim-marquee { animation: marqueeSlow 18s linear infinite; }
-
-        /* Carte de luxe interactive */
-        .card-luxury {
-          background: rgba(255, 255, 255, 0.8);
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .card-luxury:hover {
-          transform: translateY(-12px);
-          background: rgba(255, 255, 255, 1);
-          border-color: rgba(0, 0, 0, 0.2);
-          box-shadow: 0 35px 70px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Zoom dynamique sur image */
-        .img-zoom {
-          transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .card-luxury:hover .img-zoom {
-          transform: scale(1.08);
-        }
-
-        /* Animation badge prix */
-        .price-badge {
-          background: #070709;
-          color: #FFFFFF;
-          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .card-luxury:hover .price-badge {
-          transform: scale(1.1) rotate(-3deg);
-          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Animation flèche interactive */
-        .arrow-btn {
-          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .card-luxury:hover .arrow-btn {
-          transform: translate(4px, -4px) scale(1.1);
-          background-color: #070709;
-          color: #FFFFFF;
-        }
-
-        /* Animation des Boutons de Réservation */
-        .btn-badass {
-          position: relative;
-          overflow: hidden;
-          transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-          user-select: none;
-        }
-
-        .btn-badass::before {
-          content: '';
-          position: absolute;
-          top: -50%;
-          left: -50%;
-          width: 50%;
-          height: 200%;
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255, 255, 255, 0.45),
-            transparent
-          );
-          transform: translateX(-150%) skewX(-25deg);
-        }
-
-        .btn-badass:hover::before {
-          animation: lightSweep 0.85s ease-in-out infinite;
-        }
-
-        .btn-badass:hover {
-          transform: translateY(-4px) scale(1.03);
-          box-shadow: 0 20px 40px -10px rgba(7, 7, 9, 0.35);
-        }
-
-        .btn-badass:active {
-          transform: translateY(2px) scale(0.93) !important;
-          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
-        }
-      `}</style>
+      <style>{STYLES}</style>
 
       {/* ARRIÈRE-PLAN ANIMÉ & DYNAMIQUE */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
@@ -177,9 +187,9 @@ function Prestations() {
       {/* SECTION GRILLE DE COUPES & PRESTATIONS */}
       <section className="relative z-10 px-6 md:px-12 pb-32 max-w-7xl mx-auto">
         <div className="grid md:grid-cols-3 gap-8">
-          {coupes.map((coupe, index) => (
+          {COUPES.map((coupe, index) => (
             <div
-              key={index}
+              key={coupe.id}
               className="card-luxury rounded-[2.5rem] overflow-hidden flex flex-col justify-between group relative"
             >
               {/* VISUEL / IMAGE */}
@@ -187,7 +197,12 @@ function Prestations() {
                 <img
                   src={coupe.image}
                   alt={coupe.name}
+                  loading="lazy"
                   className="img-zoom w-full h-full object-cover"
+                  onError={(e) => {
+                    // Fallback visuel si l'image ne charge pas
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
 
                 {/* OVERLAY DE VIGNETTAGE AU HOVER */}
@@ -204,6 +219,7 @@ function Prestations() {
                 <a
                   href="/reservation"
                   className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center text-black font-bold text-lg shadow-lg arrow-btn"
+                  aria-label={`Réserver ${coupe.name}`}
                 >
                   ↗
                 </a>

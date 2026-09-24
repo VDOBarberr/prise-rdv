@@ -19,19 +19,24 @@ function MesRendezVous() {
   const [rescheduleMessage, setRescheduleMessage] = useState("");
   const [rescheduling, setRescheduling] = useState(false);
 
+  // FORMATAGE LISIBLE DE LA DATE (YYYY-MM-DD -> DD/MM/YYYY)
+  function formatDate(rawDate) {
+    if (!rawDate) return "";
+    const cleanDate = rawDate.split("T")[0];
+    const [year, month, day] = cleanDate.split("-");
+    if (!year || !month || !day) return rawDate;
+    return `${day}/${month}/${year}`;
+  }
+
   // FONCTION DE NORMALISATION DU TÉLÉPHONE (+33 6 XX... -> 06XX...)
   function cleanPhoneNumber(rawPhone) {
     if (!rawPhone) return "";
     
-    // Enlève tous les espaces, tirets, points et parenthèses
     let cleaned = rawPhone.replace(/[\s\.\-\(\)]/g, "");
 
-    // Si le numéro commence par +33, on remplace par 0
     if (cleaned.startsWith("+33")) {
       cleaned = "0" + cleaned.slice(3);
-    } 
-    // Si le numéro commence par 33 sans le +, on remplace aussi par 0
-    else if (cleaned.startsWith("33") && cleaned.length > 10) {
+    } else if (cleaned.startsWith("33") && cleaned.length > 10) {
       cleaned = "0" + cleaned.slice(2);
     }
 
@@ -56,7 +61,6 @@ function MesRendezVous() {
       const cleanName = name.trim();
       const searchedPhone = cleanPhoneNumber(phone);
 
-      // Recherche par nom dans Supabase
       const { data, error } = await supabase
         .from("appointments")
         .select("*")
@@ -68,7 +72,6 @@ function MesRendezVous() {
         return;
       }
 
-      // Filtrage intelligent du numéro de téléphone
       const filtered = (data || []).filter((item) => {
         const dbPhoneClean = cleanPhoneNumber(item.phone);
         return dbPhoneClean.includes(searchedPhone) || searchedPhone.includes(dbPhoneClean);
@@ -88,7 +91,7 @@ function MesRendezVous() {
     }
   }
 
-  // RÈGLE DES 24H
+  // RÈGLE DES 24H PRÉCISE
   function canReschedule(appointment) {
     if (!appointment?.date || !appointment?.time) return false;
 
@@ -157,7 +160,7 @@ function MesRendezVous() {
     }
   }
 
-  // CONFIRMER LE DÉCALAGE SANS CRÉER DE DOUBLONS DANS LA DB
+  // CONFIRMER LE DÉCALAGE SANS CRÉER DE DOUBLONS
   async function confirmReschedule() {
     if (!reschedulingAppointment || !newDate || !selectedTime) {
       setRescheduleMessage("Veuillez sélectionner une date et une heure.");
@@ -171,7 +174,6 @@ function MesRendezVous() {
       const oldDate = reschedulingAppointment.date?.split("T")[0];
       const oldTime = reschedulingAppointment.time;
 
-      // 1. Mettre à jour le rendez-vous dans la table appointments
       const { error: updateError } = await supabase
         .from("appointments")
         .update({
@@ -182,7 +184,6 @@ function MesRendezVous() {
 
       if (updateError) throw updateError;
 
-      // 2. Libérer l'ancien créneau de façon sécurisée (sans doublons)
       if (oldDate && oldTime) {
         const { data: existingSlots } = await supabase
           .from("availability")
@@ -191,26 +192,22 @@ function MesRendezVous() {
           .eq("time", oldTime);
 
         if (existingSlots && existingSlots.length > 0) {
-          // Met à jour la première entrée
           await supabase
             .from("availability")
             .update({ active: true })
             .eq("id", existingSlots[0].id);
 
-          // Supprime les doublons éventuels
           if (existingSlots.length > 1) {
             const idsToDelete = existingSlots.slice(1).map((s) => s.id);
             await supabase.from("availability").delete().in("id", idsToDelete);
           }
         } else {
-          // Si le créneau n'existait pas, on le crée une seule fois
           await supabase
             .from("availability")
             .insert([{ date: oldDate, time: oldTime, active: true }]);
         }
       }
 
-      // 3. Verrouiller le nouveau créneau
       await supabase
         .from("availability")
         .update({ active: false })
@@ -230,7 +227,6 @@ function MesRendezVous() {
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#070709] overflow-hidden relative selection:bg-black selection:text-white font-sans pb-28">
       
-      {/* STYLES ET ANIMATIONS */}
       <style>{`
         @keyframes rotateSlow {
           0% { transform: rotate(0deg) scale(1); }
@@ -449,7 +445,7 @@ function MesRendezVous() {
                           Date
                         </p>
                         <p className="font-serif text-2xl font-bold">
-                          {appointment.date}
+                          {formatDate(appointment.date)}
                         </p>
                       </div>
 
@@ -549,7 +545,7 @@ function MesRendezVous() {
                 <div className="bg-black/5 p-4 rounded-2xl text-xs">
                   <p className="text-gray-500 uppercase tracking-widest font-bold text-[9px] mb-1">RDV actuel</p>
                   <p className="font-bold text-black text-sm">
-                    {reschedulingAppointment.date} à {reschedulingAppointment.time} ({reschedulingAppointment.service})
+                    {formatDate(reschedulingAppointment.date)} à {reschedulingAppointment.time} ({reschedulingAppointment.service})
                   </p>
                 </div>
 

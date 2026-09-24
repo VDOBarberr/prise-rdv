@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
 import { supabase } from "../services/supabase"
 
-// Fonction de normalisation du numéro de téléphone
+// Normalisation du téléphone
 function formatPhoneNumber(phone) {
   if (!phone) return ""
   let cleaned = phone.replace(/\D/g, "")
@@ -11,18 +11,12 @@ function formatPhoneNumber(phone) {
   return cleaned
 }
 
-// Fonction de vérification si le créneau est déjà passé
+// Vérification créneau passé
 function isSlotInPast(dateStr, timeStr) {
-  if (!dateStr || !timeStr) return false;
-
-  // Transforme "11h00" en "11:00"
-  const formattedTime = timeStr.replace("h", ":");
-  
-  // Date et heure complètes du créneau
-  const slotDate = new Date(`${dateStr}T${formattedTime}:00`);
-  const now = new Date();
-
-  return slotDate <= now;
+  if (!dateStr || !timeStr) return false
+  const formattedTime = timeStr.replace("h", ":")
+  const slotDate = new Date(`${dateStr}T${formattedTime}:00`)
+  return slotDate <= new Date()
 }
 
 function Booking() {
@@ -43,28 +37,31 @@ function Booking() {
     service: ""
   })
 
-  const services = [
-    {
-      name: "Coupe",
-      price: "15€",
-      description: "Coupe sur-mesure & finition haute précision"
-    },
-    {
-      name: "Coupe + Taille Barbe ",
-      price: "20€",
-      description: "Coupe sur-mesure & taille de barbe avec finitions haute précision."
-    },
-    {
-      name: "Transformation",
-      price: "20€",
-      description: "Changement de style complet (+2 mois de repousse)"
-    }
-  ]
+  const services = useMemo(
+    () => [
+      {
+        name: "Coupe",
+        price: "15€",
+        description: "Coupe sur-mesure & finition haute précision"
+      },
+      {
+        name: "Coupe + Taille Barbe ",
+        price: "20€",
+        description: "Coupe sur-mesure & taille de barbe avec finitions haute précision."
+      },
+      {
+        name: "Transformation",
+        price: "20€",
+        description: "Changement de style complet (+2 mois de repousse)"
+      }
+    ],
+    []
+  )
 
-  async function loadAvailability() {
+  const loadAvailability = useCallback(async () => {
     const { data, error } = await supabase
       .from("availability")
-      .select("*")
+      .select("id, date, time, active")
       .eq("active", true)
       .order("date", { ascending: true })
       .order("time", { ascending: true })
@@ -75,16 +72,19 @@ function Booking() {
     }
 
     setAvailability(data || [])
-  }
+  }, [])
 
   useEffect(() => {
     loadAvailability()
-  }, [])
+  }, [loadAvailability])
 
-  // Filtrage des créneaux : on garde uniquement ceux de la date sélectionnée QUI NE SONT PAS PASSÉS
-  const availableSlots = availability.filter(
-    (slot) => slot.date === selectedDate && !isSlotInPast(slot.date, slot.time)
-  )
+  // Filtrage mémorisé
+  const availableSlots = useMemo(() => {
+    if (!selectedDate) return []
+    return availability.filter(
+      (slot) => slot.date === selectedDate && !isSlotInPast(slot.date, slot.time)
+    )
+  }, [availability, selectedDate])
 
   async function createAppointment(e) {
     e.preventDefault()
@@ -95,7 +95,6 @@ function Booking() {
       return
     }
 
-    // Sécurité supplémentaire si le temps s'est écoulé pendant la saisie du formulaire
     if (isSlotInPast(selectedSlot.date, selectedSlot.time)) {
       setMessage("Ce créneau horaire est déjà dépassé. Veuillez en choisir un autre.")
       setSelectedSlot(null)
@@ -110,59 +109,44 @@ function Booking() {
     setLoading(true)
 
     try {
-      const { data: currentSlot, error: checkError } = await supabase
-        .from("availability")
-        .select("*")
-        .eq("id", selectedSlot.id)
-        .eq("active", true)
-        .maybeSingle()
-
-      if (checkError || !currentSlot) {
-        setAvailability((prev) => prev.filter((slot) => slot.id !== selectedSlot.id))
-        setSelectedSlot(null)
-        setMessage("Ce créneau n'est plus disponible.")
-        return
-      }
-
       const formattedPhone = formatPhoneNumber(form.phone)
 
-      const appointmentData = {
-        name: form.name,
-        phone: formattedPhone,
-        email: form.email,
-        service: form.service,
-        date: currentSlot.date,
-        time: currentSlot.time,
-        status: "Confirmé"
-      }
+      // Exécution parallèle : enregistrement RDV + désactivation du créneau
+      const [appointmentRes, availabilityRes] = await Promise.all([
+        supabase.from("appointments").insert({
+          name: form.name,
+          phone: formattedPhone,
+          email: form.email,
+          service: form.service,
+          date: selectedSlot.date,
+          time: selectedSlot.time,
+          status: "Confirmé"
+        }),
+        supabase
+          .from("availability")
+          .update({ active: false })
+          .eq("id", selectedSlot.id)
+          .eq("active", true)
+      ])
 
-      const { error: appointmentError } = await supabase
-        .from("appointments")
-        .insert(appointmentData)
-
-      if (appointmentError) {
-        setMessage("Erreur lors de l'enregistrement de la réservation.")
+      if (appointmentRes.error || availabilityRes.error) {
+        setMessage("Erreur lors de la réservation ou créneau déjà indisponible.")
+        await loadAvailability()
+        setSelectedSlot(null)
         return
       }
 
-      const newConfirmation = {
+      setConfirmationData({
         name: form.name,
         phone: formattedPhone,
         email: form.email,
         service: form.service,
-        date: currentSlot.date,
-        time: currentSlot.time
-      }
-
-      setConfirmationData(newConfirmation)
+        date: selectedSlot.date,
+        time: selectedSlot.time
+      })
       setConfirmed(true)
 
-      await supabase
-        .from("availability")
-        .update({ active: false })
-        .eq("id", currentSlot.id)
-
-      setAvailability((prev) => prev.filter((slot) => slot.id !== currentSlot.id))
+      setAvailability((prev) => prev.filter((slot) => slot.id !== selectedSlot.id))
     } catch (err) {
       setMessage("Une erreur inattendue est survenue.")
     } finally {
@@ -170,8 +154,7 @@ function Booking() {
     }
   }
 
-  // Date du jour au format YYYY-MM-DD pour bloquer la sélection de jours passés dans le calendrier
-  const todayDateString = new Date().toISOString().split("T")[0]
+  const todayDateString = useMemo(() => new Date().toISOString().split("T")[0], [])
 
   return (
     <div className="min-h-screen bg-[#FFFFFF] text-[#0A0A0A] font-sans pb-28 pt-10 px-4 sm:px-6 relative overflow-hidden selection:bg-black selection:text-white">
@@ -327,7 +310,7 @@ function Booking() {
 
               <input
                 type="date"
-                min={todayDateString} // Empêche de sélectionner des jours passés
+                min={todayDateString}
                 value={selectedDate}
                 onChange={(e) => {
                   setSelectedDate(e.target.value)

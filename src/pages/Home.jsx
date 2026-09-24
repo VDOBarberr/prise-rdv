@@ -1,147 +1,155 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+
+// Styles CSS extraits pour éviter les injections/recalculs à chaque re-rendu
+const STYLES = `
+  @keyframes subtleRotate {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.15); }
+    100% { transform: rotate(360deg) scale(1); }
+  }
+
+  @keyframes marqueeSlow {
+    0% { transform: translateX(0%); }
+    100% { transform: translateX(-50%); }
+  }
+
+  @keyframes lightSweep {
+    0% { transform: translateX(-150%) skewX(-25deg); }
+    100% { transform: translateX(250%) skewX(-25deg); }
+  }
+
+  .anim-rotate { animation: subtleRotate 25s linear infinite; }
+  .anim-marquee { animation: marqueeSlow 18s linear infinite; }
+
+  .card-luxury {
+    background: rgba(0, 0, 0, 0.02);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+    will-change: transform;
+  }
+
+  .card-luxury:hover {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.25);
+    transform: translateY(-8px);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.08), 0 0 40px rgba(0, 0, 0, 0.03);
+  }
+
+  .price-badge {
+    background: #070709;
+    color: #FFFFFF;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+    will-change: transform;
+  }
+
+  .card-luxury:hover .price-badge {
+    transform: scale(1.12) rotate(-4deg);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.25);
+  }
+
+  .btn-badass {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease;
+    user-select: none;
+    will-change: transform;
+  }
+
+  .btn-badass::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 50%;
+    height: 200%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.45),
+      transparent
+    );
+    transform: translateX(-150%) skewX(-25deg);
+  }
+
+  .btn-badass:hover::before {
+    animation: lightSweep 0.85s ease-in-out infinite;
+  }
+
+  .btn-badass:hover {
+    transform: translateY(-4px) scale(1.04);
+    box-shadow: 0 20px 40px -10px rgba(7, 7, 9, 0.35);
+  }
+
+  .btn-badass:active {
+    transform: translateY(2px) scale(0.93) !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  .btn-badass-secondary {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+    user-select: none;
+    will-change: transform;
+  }
+
+  .btn-badass-secondary:hover {
+    transform: translateY(-4px) scale(1.04);
+    background: rgba(7, 7, 9, 0.05);
+    border-color: rgba(7, 7, 9, 0.4);
+    box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.12);
+  }
+
+  .btn-badass-secondary:active {
+    transform: translateY(2px) scale(0.93) !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1) !important;
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+`;
 
 function Home() {
-  // Gestion de l'apparition/disparition au scroll
   const [showBottomBar, setShowBottomBar] = useState(false);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  
+  // Utilisation d'une ref pour suivre la dernière position sans re-rendre la page
+  const lastScrollY = useRef(0);
+  const ticking = useRef(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+      if (!ticking.current) {
+        window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY;
 
-      // Si on défile vers le bas et qu'on a dépassé 100px de scroll
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        setShowBottomBar(true);
-      } 
-      // Si on remonte
-      else if (currentScrollY < lastScrollY) {
-        setShowBottomBar(false);
+          // Mise à jour de l'état UNIQUEMENT si le statut de visibilité change
+          if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
+            setShowBottomBar((prev) => (prev ? prev : true));
+          } else if (currentScrollY < lastScrollY.current) {
+            setShowBottomBar((prev) => (!prev ? prev : false));
+          }
+
+          lastScrollY.current = currentScrollY;
+          ticking.current = false;
+        });
+
+        ticking.current = true;
       }
-
-      setLastScrollY(currentScrollY);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#070709] overflow-hidden relative selection:bg-black selection:text-white font-sans">
 
-      {/* DÉFINITION DES CSS ET ANIMATIONS SUR-MESURE */}
-      <style>{`
-        @keyframes subtleRotate {
-          0% { transform: rotate(0deg) scale(1); }
-          50% { transform: rotate(180deg) scale(1.15); }
-          100% { transform: rotate(360deg) scale(1); }
-        }
-
-        @keyframes marqueeSlow {
-          0% { transform: translateX(0%); }
-          100% { transform: translateX(-50%); }
-        }
-
-        @keyframes lightSweep {
-          0% { transform: translateX(-150%) skewX(-25deg); }
-          100% { transform: translateX(250%) skewX(-25deg); }
-        }
-
-        .anim-rotate { animation: subtleRotate 25s linear infinite; }
-        .anim-marquee { animation: marqueeSlow 18s linear infinite; }
-
-        /* Effet Carte de Luxe avec Bordure Interactive (Thème Clair) */
-        .card-luxury {
-          background: rgba(0, 0, 0, 0.02);
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .card-luxury:hover {
-          background: rgba(0, 0, 0, 0.04);
-          border-color: rgba(0, 0, 0, 0.25);
-          transform: translateY(-8px);
-          box-shadow: 0 30px 60px rgba(0, 0, 0, 0.08), 0 0 40px rgba(0, 0, 0, 0.03);
-        }
-
-        .price-badge {
-          background: #070709;
-          color: #FFFFFF;
-          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .card-luxury:hover .price-badge {
-          transform: scale(1.12) rotate(-4deg);
-          box-shadow: 0 12px 25px rgba(0, 0, 0, 0.25);
-        }
-
-        /* ANIMATION BOUTONS QUI DÉCHIRE (EXPLOSIVE & ÉLÉGANTE) */
-        .btn-badass {
-          position: relative;
-          overflow: hidden;
-          transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-          user-select: none;
-        }
-
-        /* Balayage néon de lumière au survol */
-        .btn-badass::before {
-          content: '';
-          position: absolute;
-          top: -50%;
-          left: -50%;
-          width: 50%;
-          height: 200%;
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255, 255, 255, 0.45),
-            transparent
-          );
-          transform: translateX(-150%) skewX(-25deg);
-        }
-
-        .btn-badass:hover::before {
-          animation: lightSweep 0.85s ease-in-out infinite;
-        }
-
-        .btn-badass:hover {
-          transform: translateY(-4px) scale(1.04);
-          box-shadow: 0 20px 40px -10px rgba(7, 7, 9, 0.35);
-        }
-
-        .btn-badass:active {
-          transform: translateY(2px) scale(0.93) !important;
-          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
-          transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        }
-
-        /* Variante Bouton Secondaire (Outline/Card) */
-        .btn-badass-secondary {
-          position: relative;
-          overflow: hidden;
-          transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-          user-select: none;
-        }
-
-        .btn-badass-secondary:hover {
-          transform: translateY(-4px) scale(1.04);
-          background: rgba(7, 7, 9, 0.05);
-          border-color: rgba(7, 7, 9, 0.4);
-          box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.12);
-        }
-
-        .btn-badass-secondary:active {
-          transform: translateY(2px) scale(0.93) !important;
-          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1) !important;
-          transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        }
-      `}</style>
+      <style>{STYLES}</style>
 
       {/* ARRIÈRE-PLAN ANIMÉ & DYNAMIQUE */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-black/[0.03] rounded-full blur-[150px] anim-rotate" />
         
-        {/* Pattern de fond type maillage minimaliste */}
         <div 
           className="absolute inset-0 opacity-[0.05]" 
           style={{ backgroundImage: 'radial-gradient(#000000 1px, transparent 1px)', backgroundSize: '32px 32px' }} 

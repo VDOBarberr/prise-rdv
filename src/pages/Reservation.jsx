@@ -1,14 +1,85 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../services/supabase";
 
-function Reservation() {
-  const allTimes = ["09h00", "10h00", "11h00", "14h00", "15h00"];
+// Extraction des styles hors du composant pour de meilleures performances de rendu
+const STYLES = `
+  @keyframes rotateSlow {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.1); }
+    100% { transform: rotate(360deg) scale(1); }
+  }
 
+  @keyframes lightSweep {
+    0% { transform: translateX(-150%) skewX(-25deg); }
+    100% { transform: translateX(250%) skewX(-25deg); }
+  }
+
+  .anim-rotate { animation: rotateSlow 25s linear infinite; }
+
+  .card-lux {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s ease, box-shadow 0.35s ease;
+    will-change: transform;
+  }
+
+  .card-lux:hover {
+    border-color: rgba(0, 0, 0, 0.18);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08);
+  }
+
+  .btn-badass {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease;
+    user-select: none;
+    will-change: transform;
+  }
+
+  .btn-badass::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 50%;
+    height: 200%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.45),
+      transparent
+    );
+    transform: translateX(-150%) skewX(-25deg);
+  }
+
+  .btn-badass:hover::before {
+    animation: lightSweep 0.85s ease-in-out infinite;
+  }
+
+  .btn-badass:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 30px -10px rgba(7, 7, 9, 0.35);
+  }
+
+  .btn-badass:active {
+    transform: translateY(1px) scale(0.97) !important;
+  }
+`;
+
+const ALL_TIMES = ["09h00", "10h00", "11h00", "14h00", "15h00"];
+
+function Reservation() {
   const [services, setServices] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [availableTimes, setAvailableTimes] = useState([]);
   const [selectedTime, setSelectedTime] = useState(null);
+  
+  // États de chargement
+  const [loadingServices, setLoadingServices] = useState(true);
+  const [loadingTimes, setLoadingTimes] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -19,24 +90,24 @@ function Reservation() {
   const [confirmation, setConfirmation] = useState(null);
 
   async function getServices() {
+    setLoadingServices(true);
     const { data, error } = await supabase
       .from("services")
       .select("*")
       .eq("active", true);
 
     if (error) {
-      console.log("Erreur services :", error);
-      return;
+      console.error("Erreur lors de la récupération des services :", error);
+    } else {
+      setServices(data || []);
     }
-
-    setServices(data || []);
+    setLoadingServices(false);
   }
 
   useEffect(() => {
     getServices();
 
     const savedConfirmation = localStorage.getItem("vdo_barber_confirmation");
-
     if (savedConfirmation) {
       try {
         setConfirmation(JSON.parse(savedConfirmation));
@@ -52,22 +123,22 @@ function Reservation() {
       return;
     }
 
+    setLoadingTimes(true);
     const { data, error } = await supabase
       .from("appointments")
       .select("time")
       .eq("date", date);
 
     if (error) {
-      console.log("Erreur horaires :", error);
-      return;
+      console.error("Erreur lors de la récupération des horaires :", error);
+    } else {
+      const bookedTimes = (data || []).map((appointment) => appointment.time);
+      const freeTimes = ALL_TIMES.filter((time) => !bookedTimes.includes(time));
+      setAvailableTimes(freeTimes);
     }
 
-    const bookedTimes = (data || []).map((appointment) => appointment.time);
-
-    const freeTimes = allTimes.filter((time) => !bookedTimes.includes(time));
-
-    setAvailableTimes(freeTimes);
     setSelectedTime(null);
+    setLoadingTimes(false);
   }
 
   useEffect(() => {
@@ -84,20 +155,12 @@ function Reservation() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!selectedService) {
-      alert("Veuillez choisir une prestation");
+    if (!selectedService || !selectedDate || !selectedTime) {
+      alert("Veuillez sélectionner tous les champs de réservation.");
       return;
     }
 
-    if (!selectedDate) {
-      alert("Veuillez choisir une date");
-      return;
-    }
-
-    if (!selectedTime) {
-      alert("Veuillez choisir un horaire");
-      return;
-    }
+    setIsSubmitting(true);
 
     const appointment = {
       name: form.name,
@@ -114,8 +177,9 @@ function Reservation() {
       .insert([appointment]);
 
     if (error) {
-      console.log("Erreur réservation :", error);
-      alert("Erreur lors de la réservation");
+      console.error("Erreur réservation :", error);
+      alert("Une erreur s'est produite lors de la réservation.");
+      setIsSubmitting(false);
       return;
     }
 
@@ -134,74 +198,16 @@ function Reservation() {
     );
 
     setConfirmation(confirmationData);
+    setIsSubmitting(false);
   }
+
+  // Date minimale autorisée : aujourd'hui
+  const today = new Date().toISOString().split("T")[0];
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#070709] overflow-hidden relative selection:bg-black selection:text-white font-sans pb-24">
       
-      {/* STYLES & ANIMATIONS DE LUXE */}
-      <style>{`
-        @keyframes rotateSlow {
-          0% { transform: rotate(0deg) scale(1); }
-          50% { transform: rotate(180deg) scale(1.1); }
-          100% { transform: rotate(360deg) scale(1); }
-        }
-
-        @keyframes lightSweep {
-          0% { transform: translateX(-150%) skewX(-25deg); }
-          100% { transform: translateX(250%) skewX(-25deg); }
-        }
-
-        .anim-rotate { animation: rotateSlow 25s linear infinite; }
-
-        .card-lux {
-          background: rgba(255, 255, 255, 0.85);
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .card-lux:hover {
-          border-color: rgba(0, 0, 0, 0.18);
-          box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08);
-        }
-
-        .btn-badass {
-          position: relative;
-          overflow: hidden;
-          transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-          user-select: none;
-        }
-
-        .btn-badass::before {
-          content: '';
-          position: absolute;
-          top: -50%;
-          left: -50%;
-          width: 50%;
-          height: 200%;
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255, 255, 255, 0.45),
-            transparent
-          );
-          transform: translateX(-150%) skewX(-25deg);
-        }
-
-        .btn-badass:hover::before {
-          animation: lightSweep 0.85s ease-in-out infinite;
-        }
-
-        .btn-badass:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 15px 30px -10px rgba(7, 7, 9, 0.35);
-        }
-
-        .btn-badass:active {
-          transform: translateY(1px) scale(0.97) !important;
-        }
-      `}</style>
+      <style>{STYLES}</style>
 
       {/* ARRIÈRE-PLAN ANIMÉ */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
@@ -232,7 +238,7 @@ function Reservation() {
 
         {/* ECRAN DE CONFIRMATION */}
         {confirmation ? (
-          <div className="card-lux rounded-[2.5rem] p-8 md:p-12 text-center shadow-2xl relative overflow-hidden border border-black/10 animate-fade-in">
+          <div className="card-lux rounded-[2.5rem] p-8 md:p-12 text-center shadow-2xl relative overflow-hidden border border-black/10">
             <div className="w-20 h-20 rounded-full bg-[#070709] text-white flex items-center justify-center mx-auto mb-6 text-3xl font-black shadow-xl">
               ✓
             </div>
@@ -306,47 +312,53 @@ function Reservation() {
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 gap-4">
-                {services.map((service) => {
-                  const isSelected = selectedService?.id === service.id;
+              {loadingServices ? (
+                <div className="py-8 text-center text-xs font-bold uppercase tracking-widest text-gray-400 animate-pulse">
+                  Chargement des prestations...
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {services.map((service) => {
+                    const isSelected = selectedService?.id === service.id;
 
-                  return (
-                    <button
-                      key={service.id}
-                      type="button"
-                      onClick={() => setSelectedService(service)}
-                      className={`
-                        w-full p-6 rounded-2xl border text-left transition-all duration-300 cursor-pointer flex items-center justify-between gap-4
-                        ${
-                          isSelected
-                            ? "bg-[#070709] text-white border-black shadow-xl scale-[1.01]"
-                            : "bg-[#FAFAF8] text-[#070709] border-black/10 hover:border-black/30 hover:bg-white"
-                        }
-                      `}
-                    >
-                      <div>
-                        <h3 className="font-serif text-xl font-bold mb-1">
-                          {service.name}
-                        </h3>
-                        <p className={`text-xs font-semibold ${isSelected ? "text-gray-400" : "text-gray-500"}`}>
-                          ⏱️ {service.duration} minutes
-                        </p>
-                      </div>
+                    return (
+                      <button
+                        key={service.id}
+                        type="button"
+                        onClick={() => setSelectedService(service)}
+                        className={`
+                          w-full p-6 rounded-2xl border text-left transition-all duration-300 cursor-pointer flex items-center justify-between gap-4
+                          ${
+                            isSelected
+                              ? "bg-[#070709] text-white border-black shadow-xl scale-[1.01]"
+                              : "bg-[#FAFAF8] text-[#070709] border-black/10 hover:border-black/30 hover:bg-white"
+                          }
+                        `}
+                      >
+                        <div>
+                          <h3 className="font-serif text-xl font-bold mb-1">
+                            {service.name}
+                          </h3>
+                          <p className={`text-xs font-semibold ${isSelected ? "text-gray-400" : "text-gray-500"}`}>
+                            ⏱️ {service.duration} minutes
+                          </p>
+                        </div>
 
-                      <div className="text-right shrink-0">
-                        <span className="font-serif text-2xl font-black">
-                          {service.price} €
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+                        <div className="text-right shrink-0">
+                          <span className="font-serif text-2xl font-black">
+                            {service.price} €
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </section>
 
             {/* ETAPE 2 : SELECTION DE LA DATE */}
             {selectedService && (
-              <section className="card-lux rounded-[2.5rem] p-8 md:p-10 shadow-lg animate-fade-in">
+              <section className="card-lux rounded-[2.5rem] p-8 md:p-10 shadow-lg">
                 <div className="flex items-center gap-3 mb-6">
                   <span className="w-7 h-7 rounded-full bg-[#070709] text-white text-xs font-black flex items-center justify-center shrink-0">
                     2
@@ -358,16 +370,17 @@ function Reservation() {
 
                 <input
                   type="date"
+                  min={today}
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full bg-[#FAFAF8] border border-black/10 p-4 rounded-2xl text-black font-semibold text-sm outline-none transition-all duration-300 focus:border-black focus:ring-1 focus:ring-black focus:bg-white shadow-sm"
+                  className="w-full bg-[#FAFAF8] border border-black/10 p-4 rounded-2xl text-black font-semibold text-sm outline-none transition-all duration-300 focus:border-black focus:ring-1 focus:ring-black focus:bg-white shadow-sm cursor-pointer"
                 />
               </section>
             )}
 
             {/* ETAPE 3 : SELECTION DE L'HORAIRE */}
             {selectedDate && (
-              <section className="card-lux rounded-[2.5rem] p-8 md:p-10 shadow-lg animate-fade-in">
+              <section className="card-lux rounded-[2.5rem] p-8 md:p-10 shadow-lg">
                 <div className="flex items-center gap-3 mb-6">
                   <span className="w-7 h-7 rounded-full bg-[#070709] text-white text-xs font-black flex items-center justify-center shrink-0">
                     3
@@ -377,7 +390,11 @@ function Reservation() {
                   </h2>
                 </div>
 
-                {availableTimes.length > 0 ? (
+                {loadingTimes ? (
+                  <div className="py-6 text-center text-xs font-bold uppercase tracking-widest text-gray-400 animate-pulse">
+                    Vérification des créneaux...
+                  </div>
+                ) : availableTimes.length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {availableTimes.map((time) => {
                       const isSelected = selectedTime === time;
@@ -411,7 +428,7 @@ function Reservation() {
 
             {/* ETAPE 4 : FORMULAIRE ET VALIDATION */}
             {selectedTime && (
-              <section className="card-lux rounded-[2.5rem] p-8 md:p-10 shadow-lg animate-fade-in">
+              <section className="card-lux rounded-[2.5rem] p-8 md:p-10 shadow-lg">
                 <div className="flex items-center gap-3 mb-6">
                   <span className="w-7 h-7 rounded-full bg-[#070709] text-white text-xs font-black flex items-center justify-center shrink-0">
                     4
@@ -469,9 +486,10 @@ function Reservation() {
 
                   <button
                     type="submit"
-                    className="btn-badass w-full bg-[#070709] text-white py-5 rounded-2xl uppercase tracking-[0.25em] text-xs font-black shadow-xl mt-4"
+                    disabled={isSubmitting}
+                    className="btn-badass w-full bg-[#070709] text-white py-5 rounded-2xl uppercase tracking-[0.25em] text-xs font-black shadow-xl mt-4 disabled:opacity-50"
                   >
-                    Confirmer mon rendez-vous
+                    {isSubmitting ? "Confirmation en cours..." : "Confirmer mon rendez-vous"}
                   </button>
                 </form>
               </section>

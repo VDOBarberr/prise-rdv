@@ -13,20 +13,32 @@ function Login() {
   async function handleLogin(e) {
     e.preventDefault();
     setError("");
-    setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      setError("Email ou mot de passe incorrect");
-      setLoading(false);
+    // Validation préalable côté client pour éviter des appels réseau inutiles
+    if (!email.trim() || !password.trim()) {
+      setError("Veuillez remplir tous les champs");
       return;
     }
 
-    navigate("/admin");
+    setLoading(true);
+
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (authError) {
+        setError("Email ou mot de passe incorrect");
+        setLoading(false);
+        return;
+      }
+
+      navigate("/admin");
+    } catch (err) {
+      setError("Une erreur inattendue est survenue");
+      setLoading(false);
+    }
   }
 
   return (
@@ -47,7 +59,6 @@ function Login() {
 
         .anim-rotate { animation: rotateSlow 25s linear infinite; }
 
-        /* Carte Login Luxe */
         .card-login {
           background: rgba(255, 255, 255, 0.85);
           backdrop-filter: blur(20px);
@@ -61,7 +72,6 @@ function Login() {
           box-shadow: 0 35px 70px -10px rgba(0, 0, 0, 0.12);
         }
 
-        /* Bouton dynamique */
         .btn-badass {
           position: relative;
           overflow: hidden;
@@ -138,6 +148,7 @@ function Login() {
             </label>
             <input
               type="email"
+              required
               placeholder="admin@vdobarber.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -152,6 +163,7 @@ function Login() {
             </label>
             <input
               type="password"
+              required
               placeholder="••••••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -161,7 +173,7 @@ function Login() {
 
           {/* ERREUR */}
           {error && (
-            <div className="rounded-xl p-3 bg-red-500/10 border border-red-500/20 text-red-600 text-xs font-semibold text-center animate-shake">
+            <div className="rounded-xl p-3 bg-red-500/10 border border-red-500/20 text-red-600 text-xs font-semibold text-center">
               {error}
             </div>
           )}
