@@ -19,7 +19,6 @@ function MesRendezVous() {
   const [rescheduleMessage, setRescheduleMessage] = useState("");
   const [rescheduling, setRescheduling] = useState(false);
 
-<<<<<<< HEAD
   // FORMATAGE LISIBLE DE LA DATE (YYYY-MM-DD -> DD/MM/YYYY)
   function formatDate(rawDate) {
     if (!rawDate) return "";
@@ -27,14 +26,14 @@ function MesRendezVous() {
     const [year, month, day] = cleanDate.split("-");
     if (!year || !month || !day) return rawDate;
     return `${day}/${month}/${year}`;
-=======
+  }
+
   // FONCTION POUR TRANSFORMER DATE + HEURE EN OBJET DATE JS
   function getAppointmentDateTime(item) {
     if (!item.date || !item.time) return new Date(0);
     const dateStr = item.date.split("T")[0]; // YYYY-MM-DD
     const timeFormatted = item.time.replace("h", ":"); // "11h00" -> "11:00"
     return new Date(`${dateStr}T${timeFormatted}:00`);
->>>>>>> db2ba8dd3046775925b4776bf073a36846ee7cbb
   }
 
   // FONCTION DE NORMALISATION DU TÉLÉPHONE (+33 6 XX... -> 06XX...)
@@ -460,22 +459,6 @@ function MesRendezVous() {
                 {upcomingAppointments.map((appointment) => {
                   const canChange = canReschedule(appointment);
 
-<<<<<<< HEAD
-                return (
-                  <div
-                    key={appointment.id}
-                    className="card-appointment bg-[#070709] text-white rounded-3xl p-7 md:p-8 shadow-2xl relative overflow-hidden border border-white/10"
-                  >
-                    <div className="grid sm:grid-cols-2 gap-6">
-                      <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                        <p className="text-[9px] uppercase tracking-[0.3em] text-gray-400 font-extrabold mb-1">
-                          Date
-                        </p>
-                        <p className="font-serif text-2xl font-bold">
-                          {formatDate(appointment.date)}
-                        </p>
-                      </div>
-=======
                   return (
                     <div
                       key={appointment.id}
@@ -487,10 +470,9 @@ function MesRendezVous() {
                             Date
                           </p>
                           <p className="font-serif text-2xl font-bold">
-                            {appointment.date?.split("T")[0]}
+                            {formatDate(appointment.date)}
                           </p>
                         </div>
->>>>>>> db2ba8dd3046775925b4776bf073a36846ee7cbb
 
                         <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
                           <p className="text-[9px] uppercase tracking-[0.3em] text-gray-400 font-extrabold mb-1">
@@ -585,7 +567,7 @@ function MesRendezVous() {
                           {appointment.service}
                         </p>
                         <p className="text-xs text-gray-500 font-medium">
-                          Passé le {appointment.date?.split("T")[0]} à {appointment.time}
+                          Passé le {formatDate(appointment.date)} à {appointment.time}
                         </p>
                       </div>
                       <span className="self-start sm:self-auto px-3 py-1 rounded-full bg-gray-200 text-gray-600 text-[10px] font-bold uppercase tracking-wider">
@@ -628,11 +610,7 @@ function MesRendezVous() {
                 <div className="bg-black/5 p-4 rounded-2xl text-xs">
                   <p className="text-gray-500 uppercase tracking-widest font-bold text-[9px] mb-1">RDV actuel</p>
                   <p className="font-bold text-black text-sm">
-<<<<<<< HEAD
                     {formatDate(reschedulingAppointment.date)} à {reschedulingAppointment.time} ({reschedulingAppointment.service})
-=======
-                    {reschedulingAppointment.date?.split("T")[0]} à {reschedulingAppointment.time} ({reschedulingAppointment.service})
->>>>>>> db2ba8dd3046775925b4776bf073a36846ee7cbb
                   </p>
                 </div>
 

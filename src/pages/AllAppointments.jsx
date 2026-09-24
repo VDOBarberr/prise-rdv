@@ -12,7 +12,7 @@ function AllAppointments() {
   // Onglet actif : 'upcoming' (À venir) ou 'past' (Passés)
   const [activeTab, setActiveTab] = useState("upcoming");
 
-  // Options de tri : 'created-desc', 'created-asc', 'name-asc', 'name-desc', 'date-asc', 'date-desc'
+  // Options de tri : 'date-asc', 'date-desc', 'created-desc', 'created-asc', 'name-asc', 'name-desc'
   const [sortBy, setSortBy] = useState("date-asc");
 
   const times = useMemo(
@@ -23,9 +23,6 @@ function AllAppointments() {
     []
   );
 
-<<<<<<< HEAD
-  const fetchAppointments = useCallback(async () => {
-=======
   // Helper pour convertir la date + heure en objet Date JS
   function getAppointmentDateTime(item) {
     if (!item.date || !item.time) return new Date(0);
@@ -34,8 +31,7 @@ function AllAppointments() {
     return new Date(`${dateStr}T${timeFormatted}:00`);
   }
 
-  async function fetchAppointments() {
->>>>>>> db2ba8dd3046775925b4776bf073a36846ee7cbb
+  const fetchAppointments = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("appointments")
@@ -54,88 +50,66 @@ function AllAppointments() {
     fetchAppointments();
   }, [fetchAppointments]);
 
-<<<<<<< HEAD
-  // FILTRAGE ET TRI MÉMORISÉS (Ne recalculent que si les dépendances changent)
-  const processedAppointments = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-=======
   const now = new Date();
 
   // FILTRAGE SELON L'ONGLET + LA RECHERCHE
-  const filteredAppointments = appointments.filter((item) => {
-    const itemDate = getAppointmentDateTime(item);
-    const matchesTab = activeTab === "upcoming" ? itemDate >= now : itemDate < now;
+  const filteredAppointments = useMemo(() => {
+    return appointments.filter((item) => {
+      const itemDate = getAppointmentDateTime(item);
+      const matchesTab = activeTab === "upcoming" ? itemDate >= now : itemDate < now;
 
-    const query = searchQuery.toLowerCase();
-    const matchesQuery =
-      item.name?.toLowerCase().includes(query) ||
-      item.email?.toLowerCase().includes(query) ||
-      item.phone?.includes(query) ||
-      item.service?.toLowerCase().includes(query) ||
-      item.date?.includes(query);
+      const query = searchQuery.trim().toLowerCase();
+      const matchesQuery =
+        !query ||
+        item.name?.toLowerCase().includes(query) ||
+        item.email?.toLowerCase().includes(query) ||
+        item.phone?.includes(query) ||
+        item.service?.toLowerCase().includes(query) ||
+        item.date?.includes(query);
 
-    return matchesTab && matchesQuery;
-  });
+      return matchesTab && matchesQuery;
+    });
+  }, [appointments, activeTab, searchQuery, now]);
 
   // TRI
-  const processedAppointments = [...filteredAppointments].sort((a, b) => {
-    if (sortBy === "date-asc") {
-      return getAppointmentDateTime(a) - getAppointmentDateTime(b);
-    }
-    if (sortBy === "date-desc") {
-      return getAppointmentDateTime(b) - getAppointmentDateTime(a);
-    }
-    if (sortBy === "created-desc") {
-      const dateA = new Date(a.created_at || a.id);
-      const dateB = new Date(b.created_at || b.id);
-      return dateB - dateA;
-    } 
-    if (sortBy === "created-asc") {
-      const dateA = new Date(a.created_at || a.id);
-      const dateB = new Date(b.created_at || b.id);
-      return dateA - dateB;
-    }
-    if (sortBy === "name-asc") {
-      return (a.name || "").localeCompare(b.name || "");
-    }
-    if (sortBy === "name-desc") {
-      return (b.name || "").localeCompare(a.name || "");
-    }
-    return 0;
-  });
+  const processedAppointments = useMemo(() => {
+    return [...filteredAppointments].sort((a, b) => {
+      if (sortBy === "date-asc") {
+        return getAppointmentDateTime(a) - getAppointmentDateTime(b);
+      }
+      if (sortBy === "date-desc") {
+        return getAppointmentDateTime(b) - getAppointmentDateTime(a);
+      }
+      if (sortBy === "created-desc") {
+        const dateA = new Date(a.created_at || a.id);
+        const dateB = new Date(b.created_at || b.id);
+        return dateB - dateA;
+      } 
+      if (sortBy === "created-asc") {
+        const dateA = new Date(a.created_at || a.id);
+        const dateB = new Date(b.created_at || b.id);
+        return dateA - dateB;
+      }
+      if (sortBy === "name-asc") {
+        return (a.name || "").localeCompare(b.name || "");
+      }
+      if (sortBy === "name-desc") {
+        return (b.name || "").localeCompare(a.name || "");
+      }
+      return 0;
+    });
+  }, [filteredAppointments, sortBy]);
 
   // Compteurs globaux
-  const upcomingCount = appointments.filter((item) => getAppointmentDateTime(item) >= now).length;
-  const pastCount = appointments.filter((item) => getAppointmentDateTime(item) < now).length;
->>>>>>> db2ba8dd3046775925b4776bf073a36846ee7cbb
+  const upcomingCount = useMemo(
+    () => appointments.filter((item) => getAppointmentDateTime(item) >= now).length,
+    [appointments, now]
+  );
 
-    return appointments
-      .filter((item) => {
-        if (!query) return true;
-        return (
-          item.name?.toLowerCase().includes(query) ||
-          item.email?.toLowerCase().includes(query) ||
-          item.phone?.includes(query) ||
-          item.service?.toLowerCase().includes(query) ||
-          item.date?.includes(query)
-        );
-      })
-      .sort((a, b) => {
-        if (sortBy === "created-desc") {
-          return new Date(b.created_at || b.id) - new Date(a.created_at || a.id);
-        } 
-        if (sortBy === "created-asc") {
-          return new Date(a.created_at || a.id) - new Date(b.created_at || b.id);
-        }
-        if (sortBy === "name-asc") {
-          return (a.name || "").localeCompare(b.name || "");
-        }
-        if (sortBy === "name-desc") {
-          return (b.name || "").localeCompare(a.name || "");
-        }
-        return 0;
-      });
-  }, [appointments, searchQuery, sortBy]);
+  const pastCount = useMemo(
+    () => appointments.filter((item) => getAppointmentDateTime(item) < now).length,
+    [appointments, now]
+  );
 
   // MODIFICATION OPTIMISÉE SANS REREQUÊTAGE COMPLET
   async function saveAppointment() {
@@ -166,7 +140,6 @@ function AllAppointments() {
       return;
     }
 
-    // Mise à jour de l'état local direct pour éviter un fetch global
     setAppointments((prev) =>
       prev.map((item) =>
         item.id === editingAppointment.id
@@ -202,7 +175,6 @@ function AllAppointments() {
       return;
     }
 
-    // Retrait immédiat de l'état local
     setAppointments((prev) =>
       prev.filter((item) => item.id !== editingAppointment.id)
     );
@@ -269,9 +241,6 @@ function AllAppointments() {
           </div>
         </div>
 
-<<<<<<< HEAD
-        {/* BARRE D'OUTILS ET DE RECHERCHE */}
-=======
         {/* ONGLETS "À VENIR" ET "PASSÉS" */}
         <div className="flex items-center gap-3 border-b border-black/10 pb-4">
           <button
@@ -297,8 +266,7 @@ function AllAppointments() {
           </button>
         </div>
 
-        {/* BARRE D'OUTILS ET DE RECHERCHE ULTRA-PRATIQUE */}
->>>>>>> db2ba8dd3046775925b4776bf073a36846ee7cbb
+        {/* BARRE D'OUTILS ET DE RECHERCHE */}
         <div className="bg-white/80 backdrop-blur-xl border border-black/10 p-3 sm:p-4 rounded-3xl shadow-xl shadow-black/[0.02] space-y-3 md:space-y-0 md:flex md:items-center md:gap-4">
           
           {/* BARRE DE RECHERCHE */}
@@ -316,7 +284,7 @@ function AllAppointments() {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/10 hover:bg-black hover:text-white text-xs font-bold transition-all flex items-center justify-center"
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/10 hover:bg-black hover:text-white text-xs font-bold transition-all flex items-center justify-center cursor-pointer"
               >
                 ✕
               </button>
@@ -366,7 +334,7 @@ function AllAppointments() {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="text-xs font-black uppercase tracking-wider text-black underline hover:opacity-70 transition-opacity"
+                className="text-xs font-black uppercase tracking-wider text-black underline hover:opacity-70 transition-opacity cursor-pointer"
               >
                 Effacer la recherche
               </button>
@@ -560,7 +528,7 @@ function AllAppointments() {
                     <select
                       value={editingAppointment.time || ""}
                       onChange={(e) => setEditingAppointment({ ...editingAppointment, time: e.target.value })}
-                      className="w-full bg-[#F8F8FA] border border-black/10 p-3.5 rounded-2xl text-xs font-semibold outline-none focus:border-black focus:bg-white transition-all"
+                      className="w-full bg-[#F8F8FA] border border-black/10 p-3.5 rounded-2xl text-xs font-semibold outline-none focus:border-black focus:bg-white transition-all cursor-pointer"
                     >
                       {times.map((timeOption) => (
                         <option key={timeOption} value={timeOption}>{timeOption}</option>
@@ -587,11 +555,7 @@ function AllAppointments() {
                     type="button"
                     disabled={saving}
                     onClick={() => setEditingAppointment(null)}
-<<<<<<< HEAD
-                    className="flex-1 border border-black/10 py-4 rounded-2xl text-xs font-black uppercase tracking-wider hover:bg-gray-100 transition-colors disabled:opacity-50"
-=======
-                    className="flex-1 border border-black/10 py-4 rounded-2xl text-xs font-black uppercase tracking-wider hover:bg-gray-100 transition-colors cursor-pointer"
->>>>>>> db2ba8dd3046775925b4776bf073a36846ee7cbb
+                    className="flex-1 border border-black/10 py-4 rounded-2xl text-xs font-black uppercase tracking-wider hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50"
                   >
                     Annuler
                   </button>
@@ -600,11 +564,7 @@ function AllAppointments() {
                     type="button"
                     disabled={saving}
                     onClick={saveAppointment}
-<<<<<<< HEAD
-                    className="flex-1 bg-[#070709] text-white py-4 rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg hover:bg-gray-800 transition-all active:scale-95 disabled:opacity-50"
-=======
-                    className="flex-1 bg-[#070709] text-white py-4 rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg hover:bg-gray-800 transition-all active:scale-95 cursor-pointer"
->>>>>>> db2ba8dd3046775925b4776bf073a36846ee7cbb
+                    className="flex-1 bg-[#070709] text-white py-4 rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg hover:bg-gray-800 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
                   >
                     {saving ? "Sauvegarde..." : "Sauvegarder"}
                   </button>
@@ -614,11 +574,7 @@ function AllAppointments() {
                   type="button"
                   disabled={saving}
                   onClick={deleteAppointment}
-<<<<<<< HEAD
-                  className="w-full border border-red-500/20 text-red-600 hover:bg-red-500 hover:text-white py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 mt-2 disabled:opacity-50"
-=======
-                  className="w-full border border-red-500/20 text-red-600 hover:bg-red-500 hover:text-white py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 mt-2 cursor-pointer"
->>>>>>> db2ba8dd3046775925b4776bf073a36846ee7cbb
+                  className="w-full border border-red-500/20 text-red-600 hover:bg-red-500 hover:text-white py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 mt-2 cursor-pointer disabled:opacity-50"
                 >
                   Supprimer ce rendez-vous
                 </button>
