@@ -23,20 +23,42 @@ function AllAppointments() {
     []
   );
 
-  // Helper pour convertir la date + heure en objet Date JS
+  // Helper ultra-robuste pour convertir la date + heure en objet Date JS valide
   function getAppointmentDateTime(item) {
-    if (!item.date || !item.time) return new Date(0);
-    const dateStr = item.date.split("T")[0];
-    const timeFormatted = item.time.replace("h", ":");
-    return new Date(`${dateStr}T${timeFormatted}:00`);
+    if (!item || !item.date) return new Date(0);
+
+    try {
+      // 1. Extraire la date brute (au format YYYY-MM-DD)
+      const dateStr = String(item.date).split("T")[0].trim();
+      const [year, month, day] = dateStr.split("-").map(Number);
+
+      if (!year || !month || !day) return new Date(0);
+
+      // 2. Extraire et nettoyer l'heure (supporte "09h00", "09:00", "9h", etc.)
+      let hours = 0;
+      let minutes = 0;
+
+      if (item.time) {
+        const cleanedTime = String(item.time).toLowerCase().replace("h", ":").trim();
+        const parts = cleanedTime.split(":");
+        hours = parseInt(parts[0], 10) || 0;
+        minutes = parseInt(parts[1], 10) || 0;
+      }
+
+      // 3. Créer l'objet Date en heure locale (mois indexé de 0 à 11)
+      return new Date(year, month - 1, day, hours, minutes, 0);
+    } catch (err) {
+      console.error("Erreur de format de date pour le rendez-vous :", item, err);
+      return new Date(0);
+    }
   }
 
   const fetchAppointments = useCallback(async () => {
     setLoading(true);
+    // REMARQUE: Retrait du .order("created_at") qui provoquait l'erreur SQL 42703
     const { data, error } = await supabase
       .from("appointments")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select("*");
 
     if (error) {
       console.error("Erreur chargement rendez-vous :", error);
@@ -81,13 +103,13 @@ function AllAppointments() {
         return getAppointmentDateTime(b) - getAppointmentDateTime(a);
       }
       if (sortBy === "created-desc") {
-        const dateA = new Date(a.created_at || a.id);
-        const dateB = new Date(b.created_at || b.id);
+        const dateA = new Date(a.created_at || a.created_time || a.id || 0);
+        const dateB = new Date(b.created_at || b.created_time || b.id || 0);
         return dateB - dateA;
       } 
       if (sortBy === "created-asc") {
-        const dateA = new Date(a.created_at || a.id);
-        const dateB = new Date(b.created_at || b.id);
+        const dateA = new Date(a.created_at || a.created_time || a.id || 0);
+        const dateB = new Date(b.created_at || b.created_time || b.id || 0);
         return dateA - dateB;
       }
       if (sortBy === "name-asc") {
