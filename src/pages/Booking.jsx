@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react"
+import { useRef, useState, useMemo, useCallback } from "react"
 import { supabase } from "../services/supabase"
 
 // Normalisation du téléphone
@@ -25,6 +25,8 @@ function Booking() {
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [showServices, setShowServices] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [loadingSlots, setLoadingSlots] = useState(false)
+  const availabilityRequestId = useRef(0)
 
   const [confirmed, setConfirmed] = useState(false)
   const [confirmationData, setConfirmationData] = useState(null)
@@ -58,25 +60,54 @@ function Booking() {
     []
   )
 
-  const loadAvailability = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("availability")
-      .select("id, date, time, active")
-      .eq("active", true)
-      .order("date", { ascending: true })
-      .order("time", { ascending: true })
-
-    if (error) {
-      console.error("Erreur chargement disponibilités :", error)
+  // Charge uniquement les créneaux de la date choisie.
+  // Cela évite de télécharger toute la table availability au chargement de la page.
+  const loadAvailability = useCallback(async (date) => {
+    if (!date) {
+      setAvailability([])
       return
     }
 
-    setAvailability(data || [])
+    const requestId = ++availabilityRequestId.current
+    setLoadingSlots(true)
+
+    try {
+      const request = supabase
+        .from("availability")
+        .select("id, date, time, active")
+        .eq("active", true)
+        .eq("date", date)
+        .order("time", { ascending: true })
+
+      // Évite qu'une connexion/API qui ne répond pas laisse le bouton
+      // ou la page bloqué indéfiniment.
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("TIMEOUT")), 10000)
+      )
+
+      const { data, error } = await Promise.race([request, timeout])
+
+      if (error) throw error
+      if (requestId === availabilityRequestId.current) {
+        setAvailability(data || [])
+      }
+    } catch (error) {
+      console.error("Erreur chargement disponibilités :", error)
+      if (requestId === availabilityRequestId.current) {
+        setAvailability([])
+      }
+      setMessage(
+        error?.message === "TIMEOUT"
+          ? "Le serveur met trop de temps à répondre. Vérifiez votre connexion puis réessayez."
+          : "Impossible de charger les créneaux. Réessayez dans quelques secondes."
+      )
+    } finally {
+      if (requestId === availabilityRequestId.current) {
+        setLoadingSlots(false)
+      }
+    }
   }, [])
 
-  useEffect(() => {
-    loadAvailability()
-  }, [loadAvailability])
 
   // Filtrage mémorisé
   const availableSlots = useMemo(() => {
@@ -111,9 +142,28 @@ function Booking() {
     try {
       const formattedPhone = formatPhoneNumber(form.phone)
 
-      // Exécution parallèle : enregistrement RDV + désactivation du créneau
-      const [appointmentRes, availabilityRes] = await Promise.all([
-        supabase.from("appointments").insert({
+      // On verrouille d'abord le créneau.
+      // Le filtre active=true permet d'éviter qu'un même créneau soit
+      // réservé deux fois par deux personnes au même moment.
+      const { data: lockedSlot, error: lockError } = await supabase
+        .from("availability")
+        .update({ active: false })
+        .eq("id", selectedSlot.id)
+        .eq("active", true)
+        .select("id")
+        .maybeSingle()
+
+      if (lockError || !lockedSlot) {
+        setMessage("Ce créneau vient probablement d'être réservé. Veuillez en choisir un autre.")
+        await loadAvailability(selectedSlot.date)
+        setSelectedSlot(null)
+        return
+      }
+
+      // Une seule insertion après verrouillage du créneau.
+      const { error: appointmentError } = await supabase
+        .from("appointments")
+        .insert({
           name: form.name,
           phone: formattedPhone,
           email: form.email,
@@ -121,19 +171,16 @@ function Booking() {
           date: selectedSlot.date,
           time: selectedSlot.time,
           status: "Confirmé"
-        }),
-        supabase
-          .from("availability")
-          .update({ active: false })
-          .eq("id", selectedSlot.id)
-          .eq("active", true)
-      ])
+        })
 
-      if (appointmentRes.error || availabilityRes.error) {
-        setMessage("Erreur lors de la réservation ou créneau déjà indisponible.")
-        await loadAvailability()
-        setSelectedSlot(null)
-        return
+      if (appointmentError) {
+        // Si la création du RDV échoue, on remet le créneau disponible.
+        await supabase
+          .from("availability")
+          .update({ active: true })
+          .eq("id", selectedSlot.id)
+
+        throw appointmentError
       }
 
       setConfirmationData({
@@ -313,9 +360,11 @@ function Booking() {
                 min={todayDateString}
                 value={selectedDate}
                 onChange={(e) => {
-                  setSelectedDate(e.target.value)
+                  const date = e.target.value
+                  setSelectedDate(date)
                   setSelectedSlot(null)
                   setMessage("")
+                  loadAvailability(date)
                 }}
                 className="w-full bg-gray-50 border border-black/10 rounded-2xl p-4 text-[#0A0A0A] font-semibold text-base outline-none focus:border-black focus:bg-white transition-all cursor-pointer shadow-sm"
               />
@@ -334,7 +383,11 @@ function Booking() {
                   </div>
                 </div>
 
-                {availableSlots.length > 0 ? (
+                {loadingSlots ? (
+                  <p className="text-center text-gray-500 py-6 text-sm font-medium">
+                    Chargement des créneaux...
+                  </p>
+                ) : availableSlots.length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {availableSlots.map((slot) => {
                       const isSelected = selectedSlot?.id === slot.id
