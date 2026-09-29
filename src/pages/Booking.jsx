@@ -1,32 +1,63 @@
-import { useRef, useState, useMemo, useCallback } from "react"
+import { useState } from "react"
 import { supabase } from "../services/supabase"
 
-// Normalisation du téléphone
 function formatPhoneNumber(phone) {
-  if (!phone) return ""
-  let cleaned = phone.replace(/\D/g, "")
+  const cleaned = (phone || "").replace(/\D/g, "")
   if (cleaned.startsWith("33") && cleaned.length === 11) {
-    cleaned = "0" + cleaned.slice(2)
+    return "0" + cleaned.slice(2)
   }
   return cleaned
 }
 
-// Vérification créneau passé
+function getTodayDate() {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, "0")
+  const d = String(now.getDate()).padStart(2, "0")
+  return `${y}-${m}-${d}`
+}
+
 function isSlotInPast(dateStr, timeStr) {
   if (!dateStr || !timeStr) return false
-  const formattedTime = timeStr.replace("h", ":")
-  const slotDate = new Date(`${dateStr}T${formattedTime}:00`)
+
+  const match = String(timeStr).match(/^(\d{1,2})h?(\d{2})?$/i)
+  if (!match) return false
+
+  const hours = Number(match[1])
+  const minutes = Number(match[2] || 0)
+
+  const slotDate = new Date(`${dateStr}T00:00:00`)
+  slotDate.setHours(hours, minutes, 0, 0)
+
   return slotDate <= new Date()
 }
+
+const SERVICES = [
+  {
+    name: "Coupe",
+    price: "15€",
+    description: "Coupe sur-mesure & finition haute précision",
+  },
+  {
+    name: "Coupe + Taille Barbe",
+    price: "20€",
+    description: "Coupe sur-mesure & taille de barbe avec finitions haute précision.",
+  },
+  {
+    name: "Transformation",
+    price: "20€",
+    description: "Changement de style complet (+2 mois de repousse)",
+  },
+]
 
 function Booking() {
   const [availability, setAvailability] = useState([])
   const [selectedDate, setSelectedDate] = useState("")
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [showServices, setShowServices] = useState(false)
-  const [loading, setLoading] = useState(false)
+
   const [loadingSlots, setLoadingSlots] = useState(false)
-  const availabilityRequestId = useRef(0)
+  const [loading, setLoading] = useState(false)
 
   const [confirmed, setConfirmed] = useState(false)
   const [confirmationData, setConfirmationData] = useState(null)
@@ -36,86 +67,43 @@ function Booking() {
     name: "",
     phone: "",
     email: "",
-    service: ""
+    service: "",
   })
 
-  const services = useMemo(
-    () => [
-      {
-        name: "Coupe",
-        price: "15€",
-        description: "Coupe sur-mesure & finition haute précision"
-      },
-      {
-        name: "Coupe + Taille Barbe ",
-        price: "20€",
-        description: "Coupe sur-mesure & taille de barbe avec finitions haute précision."
-      },
-      {
-        name: "Transformation",
-        price: "20€",
-        description: "Changement de style complet (+2 mois de repousse)"
-      }
-    ],
-    []
-  )
-
-  // Charge uniquement les créneaux de la date choisie.
-  // Cela évite de télécharger toute la table availability au chargement de la page.
-  const loadAvailability = useCallback(async (date) => {
+  async function loadAvailability(date) {
     if (!date) {
       setAvailability([])
       return
     }
 
-    const requestId = ++availabilityRequestId.current
     setLoadingSlots(true)
+    setMessage("")
+    setSelectedSlot(null)
 
     try {
-      const request = supabase
+      const { data, error } = await supabase
         .from("availability")
         .select("id, date, time, active")
-        .eq("active", true)
         .eq("date", date)
+        .eq("active", true)
         .order("time", { ascending: true })
 
-      // Évite qu'une connexion/API qui ne répond pas laisse le bouton
-      // ou la page bloqué indéfiniment.
-      const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("TIMEOUT")), 10000)
-      )
-
-      const { data, error } = await Promise.race([request, timeout])
-
-      if (error) throw error
-      if (requestId === availabilityRequestId.current) {
-        setAvailability(data || [])
+      if (error) {
+        console.error("Erreur chargement disponibilités :", error)
+        setAvailability([])
+        setMessage("Impossible de charger les créneaux. Réessayez.")
+        return
       }
+
+      setAvailability(data || [])
     } catch (error) {
       console.error("Erreur chargement disponibilités :", error)
-      if (requestId === availabilityRequestId.current) {
-        setAvailability([])
-      }
-      setMessage(
-        error?.message === "TIMEOUT"
-          ? "Le serveur met trop de temps à répondre. Vérifiez votre connexion puis réessayez."
-          : "Impossible de charger les créneaux. Réessayez dans quelques secondes."
-      )
+      setAvailability([])
+      setMessage("Impossible de charger les créneaux. Réessayez.")
     } finally {
-      if (requestId === availabilityRequestId.current) {
-        setLoadingSlots(false)
-      }
+      setLoadingSlots(false)
     }
-  }, [])
-
-
-  // Filtrage mémorisé
-  const availableSlots = useMemo(() => {
-    if (!selectedDate) return []
-    return availability.filter(
-      (slot) => slot.date === selectedDate && !isSlotInPast(slot.date, slot.time)
-    )
-  }, [availability, selectedDate])
+  }
 
   async function createAppointment(e) {
     e.preventDefault()
@@ -139,13 +127,12 @@ function Booking() {
 
     setLoading(true)
 
-    try {
-      const formattedPhone = formatPhoneNumber(form.phone)
+    const formattedPhone = formatPhoneNumber(form.phone)
 
-      // On verrouille d'abord le créneau.
-      // Le filtre active=true permet d'éviter qu'un même créneau soit
-      // réservé deux fois par deux personnes au même moment.
-      const { data: lockedSlot, error: lockError } = await supabase
+    try {
+      // Réserve d'abord le créneau de façon atomique.
+      // Le filtre active=true empêche deux personnes de prendre le même créneau.
+      const { data: reservedSlot, error: reserveError } = await supabase
         .from("availability")
         .update({ active: false })
         .eq("id", selectedSlot.id)
@@ -153,138 +140,78 @@ function Booking() {
         .select("id")
         .maybeSingle()
 
-      if (lockError || !lockedSlot) {
-        setMessage("Ce créneau vient probablement d'être réservé. Veuillez en choisir un autre.")
-        await loadAvailability(selectedSlot.date)
-        setSelectedSlot(null)
+      if (reserveError || !reservedSlot) {
+        setMessage("Ce créneau vient probablement d'être réservé. Choisissez-en un autre.")
+        await loadAvailability(selectedDate)
         return
       }
 
-      // Une seule insertion après verrouillage du créneau.
       const { error: appointmentError } = await supabase
         .from("appointments")
         .insert({
-          name: form.name,
+          name: form.name.trim(),
           phone: formattedPhone,
-          email: form.email,
+          email: form.email.trim(),
           service: form.service,
           date: selectedSlot.date,
           time: selectedSlot.time,
-          status: "Confirmé"
+          status: "Confirmé",
         })
 
       if (appointmentError) {
-        // Si la création du RDV échoue, on remet le créneau disponible.
+        // Si la création du RDV échoue, on rend le créneau disponible.
         await supabase
           .from("availability")
           .update({ active: true })
           .eq("id", selectedSlot.id)
 
-        throw appointmentError
+        setMessage("La réservation n'a pas pu être enregistrée. Réessayez.")
+        await loadAvailability(selectedDate)
+        return
       }
 
       setConfirmationData({
-        name: form.name,
+        name: form.name.trim(),
         phone: formattedPhone,
-        email: form.email,
+        email: form.email.trim(),
         service: form.service,
         date: selectedSlot.date,
-        time: selectedSlot.time
+        time: selectedSlot.time,
       })
-      setConfirmed(true)
 
+      setConfirmed(true)
       setAvailability((prev) => prev.filter((slot) => slot.id !== selectedSlot.id))
-    } catch (err) {
-      setMessage("Une erreur inattendue est survenue.")
+    } catch (error) {
+      console.error("Erreur réservation :", error)
+      setMessage("Une erreur inattendue est survenue. Réessayez.")
     } finally {
       setLoading(false)
     }
   }
 
-  const todayDateString = useMemo(() => new Date().toISOString().split("T")[0], [])
+  const availableSlots = availability.filter(
+    (slot) => !isSlotInPast(slot.date, slot.time)
+  )
 
   return (
-    <div className="min-h-screen bg-[#FFFFFF] text-[#0A0A0A] font-sans pb-28 pt-10 px-4 sm:px-6 relative overflow-hidden selection:bg-black selection:text-white">
-      
-      {/* ANIMATIONS ET STYLES LUMINEUX */}
-      <style>{`
-        @keyframes floatSlow {
-          0%, 100% { transform: translate(0px, 0px) scale(1); }
-          50% { transform: translate(40px, -30px) scale(1.1); }
-        }
-
-        @keyframes lightSweep {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(200%); }
-        }
-
-        @keyframes popUp {
-          0% { opacity: 0; transform: translateY(24px) scale(0.97); }
-          100% { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        .animate-pop { animation: popUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .bg-orb-1 { animation: floatSlow 16s ease-in-out infinite; }
-        .bg-orb-2 { animation: floatSlow 22s ease-in-out infinite reverse; }
-
-        .glass-panel-light {
-          background: rgba(255, 255, 255, 0.85);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          border: 1px solid rgba(10, 10, 10, 0.08);
-          box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.05);
-          transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .glass-panel-light:hover {
-          border-color: rgba(10, 10, 10, 0.2);
-          box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.1);
-        }
-
-        .btn-black-glow {
-          position: relative;
-          overflow: hidden;
-          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        .btn-black-glow::after {
-          content: '';
-          position: absolute;
-          top: 0; left: 0; width: 50%; height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
-          transform: translateX(-100%);
-        }
-
-        .btn-black-glow:hover::after {
-          animation: lightSweep 0.8s ease-in-out infinite;
-        }
-
-        .btn-black-glow:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 15px 30px -5px rgba(10, 10, 10, 0.3);
-        }
-
-        .btn-black-glow:active {
-          transform: translateY(1px) scale(0.98);
-        }
-      `}</style>
-
-      {/* ARRIÈRE-PLAN LUMINEUX */}
+    <div className="min-h-screen bg-white text-[#0A0A0A] font-sans pb-28 pt-10 px-4 sm:px-6 relative overflow-hidden selection:bg-black selection:text-white">
+      {/* Fond volontairement léger : aucun gros blur ni animation permanente. */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="bg-orb-1 absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-black/[0.03] rounded-full blur-[140px]" />
-        <div className="bg-orb-2 absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-black/[0.02] rounded-full blur-[120px]" />
-        <div 
-          className="absolute inset-0 opacity-[0.04]" 
-          style={{ backgroundImage: 'radial-gradient(#0A0A0A 1px, transparent 1px)', backgroundSize: '32px 32px' }} 
+        <div className="absolute top-[-180px] left-1/2 -translate-x-1/2 w-[520px] h-[520px] rounded-full bg-black/[0.025]" />
+        <div className="absolute bottom-[-180px] right-[-80px] w-[400px] h-[400px] rounded-full bg-black/[0.018]" />
+        <div
+          className="absolute inset-0 opacity-[0.025]"
+          style={{
+            backgroundImage: "radial-gradient(#0A0A0A 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
         />
       </div>
 
       <div className="relative z-10 max-w-3xl mx-auto">
-        
-        {/* HEADER BRANDING */}
-        <header className="text-center mb-12 sm:mb-16 animate-pop">
+        <header className="text-center mb-12 sm:mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-black/10 bg-black/5 text-black text-[10px] tracking-[0.3em] uppercase font-black mb-5">
-            <span className="w-2 h-2 rounded-full bg-black animate-ping" />
+            <span className="w-2 h-2 rounded-full bg-black" />
             VDO Barber Experience
           </div>
 
@@ -297,9 +224,8 @@ function Booking() {
           </p>
         </header>
 
-        {/* ECRAN DE CONFIRMATION */}
         {confirmed && confirmationData ? (
-          <div className="glass-panel-light rounded-[2.5rem] p-8 sm:p-12 text-center border border-black/10 animate-pop relative overflow-hidden">
+          <div className="bg-white border border-black/10 rounded-[2.5rem] p-8 sm:p-12 text-center shadow-[0_20px_50px_-15px_rgba(0,0,0,0.06)]">
             <div className="w-20 h-20 rounded-full bg-[#0A0A0A] text-white flex items-center justify-center mx-auto mb-6 text-3xl font-black shadow-xl">
               ✓
             </div>
@@ -339,12 +265,8 @@ function Booking() {
             </p>
           </div>
         ) : (
-
-          /* PARCOURS EN ÉTAPES INTERACTIVES */
           <div className="space-y-8">
-
-            {/* ÉTAPE 1 : CHOIX DE LA DATE */}
-            <section className="glass-panel-light rounded-[2.5rem] p-7 sm:p-9 animate-pop">
+            <section className="bg-white border border-black/10 rounded-[2.5rem] p-7 sm:p-9 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.05)]">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-9 h-9 rounded-2xl bg-black text-white font-black text-sm flex items-center justify-center shrink-0 shadow-md">
                   01
@@ -357,22 +279,20 @@ function Booking() {
 
               <input
                 type="date"
-                min={todayDateString}
+                min={getTodayDate()}
                 value={selectedDate}
                 onChange={(e) => {
                   const date = e.target.value
                   setSelectedDate(date)
-                  setSelectedSlot(null)
                   setMessage("")
                   loadAvailability(date)
                 }}
-                className="w-full bg-gray-50 border border-black/10 rounded-2xl p-4 text-[#0A0A0A] font-semibold text-base outline-none focus:border-black focus:bg-white transition-all cursor-pointer shadow-sm"
+                className="w-full bg-gray-50 border border-black/10 rounded-2xl p-4 text-[#0A0A0A] font-semibold text-base outline-none focus:border-black focus:bg-white transition-colors cursor-pointer shadow-sm"
               />
             </section>
 
-            {/* ÉTAPE 2 : CHOIX DE L'HORAIRE */}
             {selectedDate && (
-              <section className="glass-panel-light rounded-[2.5rem] p-7 sm:p-9 animate-pop">
+              <section className="bg-white border border-black/10 rounded-[2.5rem] p-7 sm:p-9 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.05)]">
                 <div className="flex items-center gap-4 mb-6">
                   <div className="w-9 h-9 rounded-2xl bg-black text-white font-black text-sm flex items-center justify-center shrink-0 shadow-md">
                     02
@@ -384,13 +304,14 @@ function Booking() {
                 </div>
 
                 {loadingSlots ? (
-                  <p className="text-center text-gray-500 py-6 text-sm font-medium">
+                  <div className="text-center text-gray-500 py-6 text-sm font-medium">
                     Chargement des créneaux...
-                  </p>
+                  </div>
                 ) : availableSlots.length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {availableSlots.map((slot) => {
                       const isSelected = selectedSlot?.id === slot.id
+
                       return (
                         <button
                           key={slot.id}
@@ -399,9 +320,9 @@ function Booking() {
                             setSelectedSlot(slot)
                             setMessage("")
                           }}
-                          className={`p-4 rounded-2xl font-bold text-base transition-all duration-300 border relative overflow-hidden ${
+                          className={`p-4 rounded-2xl font-bold text-base border relative overflow-hidden transition-colors ${
                             isSelected
-                              ? "bg-[#0A0A0A] text-white border-black shadow-xl scale-105"
+                              ? "bg-[#0A0A0A] text-white border-black shadow-xl"
                               : "bg-gray-50 text-[#0A0A0A] border-black/10 hover:border-black/30 hover:bg-white"
                           }`}
                         >
@@ -418,9 +339,8 @@ function Booking() {
               </section>
             )}
 
-            {/* ÉTAPE 3 : FORMULAIRE & PRESTATION */}
             {selectedSlot && (
-              <section className="glass-panel-light rounded-[2.5rem] p-7 sm:p-9 animate-pop">
+              <section className="bg-white border border-black/10 rounded-[2.5rem] p-7 sm:p-9 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.05)]">
                 <div className="flex items-center gap-4 mb-6">
                   <div className="w-9 h-9 rounded-2xl bg-black text-white font-black text-sm flex items-center justify-center shrink-0 shadow-md">
                     03
@@ -442,7 +362,7 @@ function Booking() {
                       placeholder="Jean Dupont"
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      className="w-full bg-gray-50 border border-black/10 rounded-2xl p-4 text-[#0A0A0A] placeholder-gray-400 outline-none focus:border-black focus:bg-white transition-all shadow-sm"
+                      className="w-full bg-gray-50 border border-black/10 rounded-2xl p-4 text-[#0A0A0A] placeholder-gray-400 outline-none focus:border-black focus:bg-white transition-colors shadow-sm"
                     />
                   </div>
 
@@ -457,7 +377,7 @@ function Booking() {
                         placeholder="06 12 34 56 78"
                         value={form.phone}
                         onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                        className="w-full bg-gray-50 border border-black/10 rounded-2xl p-4 text-[#0A0A0A] placeholder-gray-400 outline-none focus:border-black focus:bg-white transition-all shadow-sm"
+                        className="w-full bg-gray-50 border border-black/10 rounded-2xl p-4 text-[#0A0A0A] placeholder-gray-400 outline-none focus:border-black focus:bg-white transition-colors shadow-sm"
                       />
                     </div>
 
@@ -471,12 +391,11 @@ function Booking() {
                         placeholder="jean@example.com"
                         value={form.email}
                         onChange={(e) => setForm({ ...form, email: e.target.value })}
-                        className="w-full bg-gray-50 border border-black/10 rounded-2xl p-4 text-[#0A0A0A] placeholder-gray-400 outline-none focus:border-black focus:bg-white transition-all shadow-sm"
+                        className="w-full bg-gray-50 border border-black/10 rounded-2xl p-4 text-[#0A0A0A] placeholder-gray-400 outline-none focus:border-black focus:bg-white transition-colors shadow-sm"
                       />
                     </div>
                   </div>
 
-                  {/* SÉLECTEUR MENU PRESTATION */}
                   <div className="relative pt-2">
                     <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-extrabold mb-2">
                       Service souhaité
@@ -484,30 +403,35 @@ function Booking() {
 
                     <button
                       type="button"
-                      onClick={() => setShowServices(!showServices)}
-                      className="w-full bg-gray-50 border border-black/10 p-4 rounded-2xl text-left flex justify-between items-center text-[#0A0A0A] font-bold text-sm hover:border-black transition-all shadow-sm"
+                      onClick={() => setShowServices((value) => !value)}
+                      className="w-full bg-gray-50 border border-black/10 p-4 rounded-2xl text-left flex justify-between items-center text-[#0A0A0A] font-bold text-sm hover:border-black transition-colors shadow-sm"
                     >
                       <span>{form.service || "Sélectionnez une prestation"}</span>
-                      <span className={`transition-transform duration-300 ${showServices ? "rotate-180" : ""}`}>▼</span>
+                      <span className={showServices ? "rotate-180" : ""}>▼</span>
                     </button>
 
                     {showServices && (
-                      <div className="mt-3 bg-[#0A0A0A] text-white rounded-2xl overflow-hidden shadow-2xl animate-pop border border-black">
-                        {services.map((s) => (
+                      <div className="mt-3 bg-[#0A0A0A] text-white rounded-2xl overflow-hidden shadow-2xl border border-black">
+                        {SERVICES.map((service) => (
                           <button
-                            key={s.name}
+                            key={service.name}
                             type="button"
                             onClick={() => {
-                              setForm({ ...form, service: `${s.name} (${s.price})` })
+                              setForm((prev) => ({
+                                ...prev,
+                                service: `${service.name} (${service.price})`,
+                              }))
                               setShowServices(false)
                             }}
-                            className="w-full p-4 text-left border-b border-white/10 last:border-none hover:bg-white hover:text-black transition-all flex justify-between items-center group cursor-pointer"
+                            className="w-full p-4 text-left border-b border-white/10 last:border-none hover:bg-white hover:text-black transition-colors flex justify-between items-center group"
                           >
                             <div>
-                              <p className="font-bold text-sm">{s.name}</p>
-                              <p className="text-xs text-gray-400 group-hover:text-gray-600">{s.description}</p>
+                              <p className="font-bold text-sm">{service.name}</p>
+                              <p className="text-xs text-gray-400 group-hover:text-gray-600">
+                                {service.description}
+                              </p>
                             </div>
-                            <span className="font-black text-base">{s.price}</span>
+                            <span className="font-black text-base">{service.price}</span>
                           </button>
                         ))}
                       </div>
@@ -523,17 +447,15 @@ function Booking() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="btn-black-glow w-full bg-[#0A0A0A] text-white font-black py-5 rounded-2xl uppercase tracking-[0.25em] text-xs mt-4 disabled:opacity-50 shadow-xl"
+                    className="w-full bg-[#0A0A0A] text-white font-black py-5 rounded-2xl uppercase tracking-[0.25em] text-xs mt-4 disabled:opacity-50 shadow-xl active:scale-[0.99] transition-transform"
                   >
                     {loading ? "Validation..." : "Confirmer le rendez-vous"}
                   </button>
                 </form>
               </section>
             )}
-
           </div>
         )}
-
       </div>
     </div>
   )
